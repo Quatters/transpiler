@@ -55,9 +55,9 @@ RULES = [
     Rule(Def.FUNCTION, r'\bfunction\b'),
 
     # general
-    Rule(Def.ID, r'[_a-zA-Z]\w*'),
-    Rule(Def.NUMBER_FLOAT, r'[-+]?\d+\.\d+'),
-    Rule(Def.NUMBER_INT, r'[-+]?[0-9]+'),
+    Rule(Def.ID, r'\b[_a-zA-Z]\w*\b'),
+    Rule(Def.NUMBER_FLOAT, r'\b[-+]?\d+\.\d+\b'),
+    Rule(Def.NUMBER_INT, r'\b[-+]?[0-9]+\b'),
     Rule(Def.LBRACKET, r'\('),
     Rule(Def.RBRACKET, r'\)'),
     Rule(Def.LBRACKET_SQUARE, r'\['),

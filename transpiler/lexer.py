@@ -25,7 +25,7 @@ class LexerError(TranspilerError):
 
 class UnexpectedTokenError(LexerError):
     def __init__(self, ref):
-        return super().__init__(f'near {ref}')
+        return super().__init__(ref)
 
 
 class Lexer:
@@ -63,5 +63,12 @@ class Lexer:
             self.pos = cursor.end()
             return token
 
-        msg = self.buffer[self.pos - 15:self.pos + 15].strip()
-        raise UnexpectedTokenError(msg)
+        raise UnexpectedTokenError(self._get_error_area())
+
+    def _get_error_area(self):
+        area = self.buffer[self.pos - 15:self.pos + 15].rstrip('\n ')
+        pointer = ' ' * 19 + '^'
+        while area.startswith(' '):
+            area = area[1:]
+            pointer = pointer[1:]
+        return f'\n\n... {area} ...' + '\n' + pointer

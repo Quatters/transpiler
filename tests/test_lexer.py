@@ -11,8 +11,9 @@ class LexerTestCase(TestCase):
             end.
         """
         lexer = Lexer(code, RULES)
-        with self.assertRaises(UnexpectedTokenError):
+        with self.assertRaises(UnexpectedTokenError) as error:
             list(lexer.tokens)
+        self.assertEqual(str(error.exception), '\n\n... begi%n ...\n        ^')
 
     def test_types(self):
         code = """
