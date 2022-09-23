@@ -1,10 +1,19 @@
 from unittest import TestCase
 from transpiler.base import Def
-from transpiler.lexer import Lexer
+from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.settings import RULES
 
 
 class LexerTestCase(TestCase):
+    def test_invalid_token(self):
+        code = """
+            begi%n
+            end.
+        """
+        lexer = Lexer(code, RULES)
+        with self.assertRaises(UnexpectedTokenError):
+            list(lexer.tokens)
+
     def test_types(self):
         code = """
             var
