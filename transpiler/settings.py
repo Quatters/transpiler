@@ -49,6 +49,7 @@ RULES = [
     Rule(Def.WHILE, r'\bwhile\b'),
     Rule(Def.UNTIL, r'\buntil\b'),
     Rule(Def.DO, r'\bdo\b'),
+    Rule(Def.TO, r'\bto\b'),
     Rule(Def.BEGIN, r'\bbegin\b'),
     Rule(Def.END, r'\bend\b'),
     Rule(Def.PROCEDURE, r'\bprocedure\b'),

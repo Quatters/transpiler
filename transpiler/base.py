@@ -76,6 +76,7 @@ class Def(Enum):
     REPEAT = 'REPEAT'
     UNTIL = 'UNTIL'
     DO = 'DO'
+    TO = 'TO'
     BEGIN = 'BEGIN'
     END = 'END'
     PROCEDURE = 'PROCEDURE'

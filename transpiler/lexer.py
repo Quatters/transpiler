@@ -16,7 +16,7 @@ class Token:
         self.pos = pos
 
     def __str__(self):
-        return self.value
+        return f'{self.value} {self.def_.value}'
 
 
 class LexerError(TranspilerError):
