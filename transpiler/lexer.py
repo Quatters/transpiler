@@ -1,22 +1,6 @@
 import re
-from enum import Enum
-
-from transpiler.base import WHITESPACE, Tag, TranspilerError
+from transpiler.base import WHITESPACE, Tag, TranspilerError, Token
 from transpiler.settings import LEXER_REGEX_FLAGS
-
-
-class Token:
-    """
-    Minimal sensible unit of code sequence.
-    """
-
-    def __init__(self, def_: Tag, value: str, pos: int):
-        self.def_ = def_
-        self.value = value
-        self.pos = pos
-
-    def __str__(self):
-        return f'{self.value} {self.def_.value}'
 
 
 class LexerError(TranspilerError):
