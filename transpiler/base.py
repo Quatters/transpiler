@@ -88,8 +88,8 @@ class LexerRule:
     Token definition and regular expression mapping. Used by lexer.
     """
 
-    def __init__(self, def_: Tag, regex: str) -> None:
-        self.def_ = def_
+    def __init__(self, tag: Tag, regex: str) -> None:
+        self.tag = tag
         self.regex = regex
 
 
@@ -98,10 +98,10 @@ class Token:
     Minimal sensible unit of code sequence.
     """
 
-    def __init__(self, def_: Tag, value: str, pos: int):
-        self.def_ = def_
+    def __init__(self, tag: Tag, value: str, pos: int):
+        self.tag = tag
         self.value = value
         self.pos = pos
 
     def __str__(self):
-        return f'{self.value} {self.def_.value}'
+        return f'{self.value} {self.tag.value}'

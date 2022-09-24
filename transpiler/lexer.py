@@ -18,7 +18,7 @@ class Lexer:
     """
 
     def __init__(self, code: str, rules: list[tuple[Tag, str]]) -> None:
-        parts = [f'(?P<{rule.def_.value}>{rule.regex})' for rule in rules]
+        parts = [f'(?P<{rule.tag.value}>{rule.regex})' for rule in rules]
         self.regex = re.compile('|'.join(parts), flags=LEXER_REGEX_FLAGS)
         self.pos: int = 0
         self.line: int = 1
