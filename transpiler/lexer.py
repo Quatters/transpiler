@@ -1,7 +1,7 @@
 import re
 from enum import Enum
 
-from transpiler.base import WHITESPACE, Def, TranspilerError
+from transpiler.base import WHITESPACE, Tag, TranspilerError
 from transpiler.settings import LEXER_REGEX_FLAGS
 
 
@@ -10,7 +10,7 @@ class Token:
     Minimal sensible unit of code sequence.
     """
 
-    def __init__(self, def_: Def, value: str, pos: int):
+    def __init__(self, def_: Tag, value: str, pos: int):
         self.def_ = def_
         self.value = value
         self.pos = pos
@@ -33,7 +33,7 @@ class Lexer:
     Token parser from code sequence.
     """
 
-    def __init__(self, code: str, rules: list[tuple[Def, str]]) -> None:
+    def __init__(self, code: str, rules: list[tuple[Tag, str]]) -> None:
         parts = [f'(?P<{rule.def_.value}>{rule.regex})' for rule in rules]
         self.regex = re.compile('|'.join(parts), flags=LEXER_REGEX_FLAGS)
         self.pos: int = 0
@@ -59,7 +59,7 @@ class Lexer:
         cursor = self.regex.match(self.buffer, self.pos)
         if cursor:
             group = cursor.lastgroup
-            token = Token(Def(group), cursor.group(group), self.pos + 1)
+            token = Token(Tag(group), cursor.group(group), self.pos + 1)
             self.pos = cursor.end()
             return token
 

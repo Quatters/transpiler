@@ -9,9 +9,9 @@ class TranspilerError(Exception):
     pass
 
 
-class Def(Enum):
+class Tag(Enum):
     """
-    Possible token definitions enumeration.
+    Possible token names enumeration.
     """
 
     def __repr__(self) -> str:
@@ -83,11 +83,11 @@ class Def(Enum):
     FUNCTION = 'FUNCTION'
 
 
-class Rule:
+class LexerRule:
     """
     Token definition and regular expression mapping. Used by lexer.
     """
 
-    def __init__(self, def_: Def, regex: str) -> None:
+    def __init__(self, def_: Tag, regex: str) -> None:
         self.def_ = def_
         self.regex = regex
