@@ -90,7 +90,7 @@ class SyntaxAnalyzerTestCase(TestCase):
             NonTerm.EXPR: {Tag.T_INTEGER},
         })
 
-    def _test_first_set_complex_rules(self):
+    def test_first_set_complex_rules(self):
         sa = SyntaxAnalyzer(None, self.complex_rules)
         sa._build_first()
 

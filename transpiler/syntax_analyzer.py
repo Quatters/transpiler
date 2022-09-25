@@ -7,9 +7,6 @@ LIMITER = 'LIMITER'
 
 
 class SyntaxAnalyzer:
-    _first: OrderedDict[NonTerm, set[Tag]] = OrderedDict()
-    _follow = None
-
     def __init__(
         self,
         tokens: Iterable[Token],
@@ -17,6 +14,7 @@ class SyntaxAnalyzer:
     ):
         self.tokens = tokens
         self.rules = rules
+        self._first: OrderedDict[NonTerm, set[Tag]] = OrderedDict()
 
     def first(self, chain: tuple[Tag, NonTerm]) -> set[Tag]:
         symbol = chain[0]
@@ -30,7 +28,6 @@ class SyntaxAnalyzer:
             result |= self.first(chain[1:])
 
         return result
-
 
     def _build_first(self):
         changed = True
