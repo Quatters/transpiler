@@ -46,6 +46,7 @@ class Tag(Entity):
     DOT = 'DOT'
     QUOTE = 'QUOTE'
     DQUOTE = 'DQOUTE'
+    LAMBDA = 'LAMBDA'
 
     # types
     T_INTEGER = 'T_INTEGER'
@@ -120,3 +121,27 @@ class Token:
 
     def __str__(self):
         return f'{self.value} {self.tag.value}'
+
+
+class NonTerm(Entity):
+    _START = '_START'
+    DESCR = 'DESCR'
+    PROG = 'PROG'
+    VARS = 'VARS'
+    EXPR = 'EXPR'
+    TYPE = 'TYPE'
+    CALL = 'CALL'
+    ARGS = 'ARGS'
+
+
+class GrammarRule:
+    def __init__(
+        self,
+        left: NonTerm,
+        right: set[tuple()]
+    ):
+        self.left = left
+        self.right = right
+
+    def __repr__(self) -> str:
+        return f'{self.left} -> {self.right}'

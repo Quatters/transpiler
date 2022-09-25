@@ -1,6 +1,6 @@
 import re
 
-from transpiler.base import Tag, LexerRule
+from transpiler.base import Tag, NonTerm, LexerRule, GrammarRule
 
 
 LEXER_REGEX_FLAGS = re.IGNORECASE
@@ -69,4 +69,32 @@ LEXER_RULES = [
     LexerRule(Tag.DOT, r'\.'),
     LexerRule(Tag.QUOTE, r"\'"),
     LexerRule(Tag.DQUOTE, r'"'),
+]
+
+GRAMMAR_RULES = [
+    GrammarRule(NonTerm._START, {
+        (NonTerm.DESCR, Tag.BEGIN, NonTerm.PROG, Tag.END, Tag.DOT)
+    }),
+    GrammarRule(NonTerm.DESCR, {
+        (NonTerm.VARS,),
+        (Tag.LAMBDA,)
+    }),
+    GrammarRule(NonTerm.VARS, {
+        (Tag.VAR, Tag.ID, Tag.ASSIGN, NonTerm.EXPR, Tag.SEMICOLON),
+        (Tag.VAR, Tag.ID, Tag.COLON, NonTerm.TYPE, Tag.ASSIGN, NonTerm.EXPR,
+         Tag.SEMICOLON),
+    }),
+    GrammarRule(NonTerm.PROG, {
+        (NonTerm.VARS, NonTerm.PROG),
+        (NonTerm.CALL, NonTerm.PROG),
+    }),
+    GrammarRule(NonTerm.EXPR, {
+        (Tag.QUOTE, Tag.ID, Tag.QUOTE),
+        (Tag.DQUOTE, Tag.ID, Tag.DQUOTE),
+        (Tag.NUMBER_INT,),
+        (Tag.NUMBER_FLOAT,),
+    }),
+    GrammarRule(NonTerm.CALL, {
+        (Tag.ID, Tag.LBRACKET, NonTerm.ARGS, Tag.RBRACKET, Tag.SEMICOLON),
+    })
 ]
