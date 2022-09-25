@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from typing import Iterable
 from transpiler.base import (
     Token,
@@ -13,23 +12,16 @@ class SyntaxAnalyzer:
     def __init__(self, tokens: Iterable[Token], rules: Iterable[GrammarRule]):
         self.tokens = tokens
         self.rules = rules
-        self._first: OrderedDict[
-            tuple[Terminal, NonTerminal],
-            set[Terminal | Special]
-        ] = OrderedDict()
-        self._follow: OrderedDict[NonTerminal, set[Terminal]] = OrderedDict()
-        self._predict_table: dict[
-            NonTerminal,
-            dict[Terminal | str, set[GrammarRule]]
-        ] = {}
+        self._first = {}
+        self._follow = {}
+        self._predict_table = {}
         self._build_first()
         self._build_follow()
 
-    def first(self, chain: tuple[Terminal, NonTerminal]) -> set[Terminal]:
+    def first(self, chain: Iterable[Terminal | NonTerminal]) -> set[Terminal]:
         symbol = chain[0]
         if isinstance(symbol, Terminal) or symbol is Special.LAMBDA:
             return {symbol}
-
         nonterm_first = self._first.get(symbol, set())
         lambda_in_nonterm_first = Special.LAMBDA in nonterm_first
         result = {s for s in nonterm_first if not s is Special.LAMBDA}
