@@ -1,5 +1,6 @@
+from functools import lru_cache
 import re
-from enum import Enum
+from enum import Enum, EnumMeta
 
 
 WHITESPACE = re.compile('\S')
@@ -9,13 +10,27 @@ class TranspilerError(Exception):
     pass
 
 
-class Tag(Enum):
+class EntityMeta(EnumMeta):
+    @lru_cache
+    def __contains__(cls, item):
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        else:
+            return True
+
+
+
+class Entity(Enum, metaclass=EntityMeta):
+    def __repr__(self) -> str:
+        return self.value
+
+
+class Tag(Entity):
     """
     Possible token names enumeration.
     """
-
-    def __repr__(self) -> str:
-        return self.value
 
     # general
     ID = 'ID'
