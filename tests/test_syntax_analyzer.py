@@ -27,7 +27,7 @@ class SyntaxAnalyzerTestCase(TestCase):
     complex_rules = [
         # _Start⟶Descr begin Prog end dot
         # Descr⟶Vars
-        # Descr⟶lambda
+        # Descr⟶
         # Vars⟶var id assign Expr semicolon
         # Vars⟶var id colon Type assign Expr semicolon
         # Prog⟶Vars Prog
@@ -43,6 +43,7 @@ class SyntaxAnalyzerTestCase(TestCase):
         # Type⟶t_string
         # Type⟶t_char
         # Type⟶t_array
+        # Args⟶id
 
         GrammarRule(NonTerm._START, {
             (NonTerm.DESCR, Tag.BEGIN, NonTerm.PROG, Tag.END, Tag.DOT)
@@ -77,7 +78,10 @@ class SyntaxAnalyzerTestCase(TestCase):
             (Tag.T_STRING,),
             (Tag.T_CHAR,),
             (Tag.T_ARRAY,),
-        })
+        }),
+        GrammarRule(NonTerm.ARGS, {
+            (Tag.ID,),
+        }),
     ]
 
     def test_first_set_simple_rules(self):
