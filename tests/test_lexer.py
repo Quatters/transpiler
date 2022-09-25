@@ -1,7 +1,6 @@
 from unittest import TestCase
-from transpiler.base import Tag
 from transpiler.lexer import Lexer, UnexpectedTokenError
-from transpiler.settings import LEXER_RULES
+from transpiler.settings import LEXER_RULES, Tag
 
 
 class LexerTestCase(TestCase):

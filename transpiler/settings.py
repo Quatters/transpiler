@@ -1,6 +1,93 @@
 import re
 
-from transpiler.base import Tag, NonTerm, LexerRule, GrammarRule
+from transpiler.base import (
+    Terminal,
+    NonTerminal,
+    LexerRule,
+    GrammarRule,
+    Special,
+)
+
+
+class Tag(Terminal):
+    """
+    Possible token names enumeration.
+    """
+
+    # general
+    ID = 'ID'
+    NUMBER_INT = 'NUMBER_INT'
+    NUMBER_FLOAT = 'NUMBER_FLOAT'
+    LBRACKET = 'LBRACKET'
+    RBRACKET = 'RBRACKET'
+    LBRACKET_SQUARE = 'LBRACKET_SQUARE'
+    RBRACKET_SQUARE = 'RBRACKET_SQUARE'
+    SEMICOLON = 'SEMICOLON'
+    COLON = 'COLON'
+    COMMA = 'COMMA'
+    DOT = 'DOT'
+    QUOTE = 'QUOTE'
+    DQUOTE = 'DQOUTE'
+
+    # types
+    T_INTEGER = 'T_INTEGER'
+    T_REAL = 'T_REAL'
+    T_BOOLEAN = 'T_BOOLEAN'
+    T_CHAR = 'T_CHAR'
+    T_STRING = 'T_STRING'
+    T_ARRAY = 'T_ARRAY'
+
+    # comparisons
+    EQ = 'EQ'
+    NE = 'NE'
+    LE = 'LE'
+    LT = 'LT'
+    GE = 'GE'
+    GT = 'GT'
+
+    # operators
+    PLUS = 'PLUS'
+    MINUS = 'MINUS'
+    MULTIPLY = 'MULTIPLY'
+    DIVIDE = 'DIVIDE'
+    ASSIGN = 'ASSIGN'
+    PLUS_ASSIGN = 'PLUS_ASSIGN'
+    MINUS_ASSIGN = 'MINUS_ASSIGN'
+    MULTIPLY_ASSIGN = 'MULTIPLY_ASSIGN'
+    DIVIDE_ASSIGN = 'DIVIDE_ASSIGN'
+    RANGE = 'RANGE'
+
+    # boolean
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
+
+    # other key words
+    VAR = 'VAR'
+    IF = 'IF'
+    THEN = 'THEN'
+    ELSE = 'ELSE'
+    CASE = 'CASE'
+    OF = 'OF'
+    FOR = 'FOR'
+    WHILE = 'WHILE'
+    REPEAT = 'REPEAT'
+    UNTIL = 'UNTIL'
+    DO = 'DO'
+    TO = 'TO'
+    BEGIN = 'BEGIN'
+    END = 'END'
+    PROCEDURE = 'PROCEDURE'
+    FUNCTION = 'FUNCTION'
+
+
+class NonTerm(NonTerminal):
+    DESCR = 'DESCR'
+    PROG = 'PROG'
+    VARS = 'VARS'
+    EXPR = 'EXPR'
+    TYPE = 'TYPE'
+    CALL = 'CALL'
+    ARGS = 'ARGS'
 
 
 LEXER_REGEX_FLAGS = re.IGNORECASE
@@ -72,12 +159,12 @@ LEXER_RULES = [
 ]
 
 GRAMMAR_RULES = [
-    GrammarRule(NonTerm._START, {
+    GrammarRule(Special.START, {
         (NonTerm.DESCR, Tag.BEGIN, NonTerm.PROG, Tag.END, Tag.DOT)
     }),
     GrammarRule(NonTerm.DESCR, {
         (NonTerm.VARS,),
-        (Tag.LAMBDA,)
+        (Special.LAMBDA,)
     }),
     GrammarRule(NonTerm.VARS, {
         (Tag.VAR, Tag.ID, Tag.ASSIGN, NonTerm.EXPR, Tag.SEMICOLON),

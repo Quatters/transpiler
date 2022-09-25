@@ -1,7 +1,8 @@
 from pprint import pprint
 from unittest import TestCase
-from transpiler.base import GrammarRule, Tag, NonTerm
-from transpiler.syntax_analyzer import SyntaxAnalyzer, LIMITER
+from transpiler.base import GrammarRule, Special
+from transpiler.settings import Tag, NonTerm
+from transpiler.syntax_analyzer import SyntaxAnalyzer
 
 
 class SyntaxAnalyzerTestCase(TestCase):
@@ -18,7 +19,7 @@ class SyntaxAnalyzerTestCase(TestCase):
             (Tag.VAR, NonTerm.VARS, Tag.BEGIN, NonTerm.EXPR, Tag.END),
         }),
         GrammarRule(NonTerm.VARS, {
-            (Tag.LAMBDA,),
+            (Special.LAMBDA,),
         }),
         GrammarRule(NonTerm.EXPR, {
             (Tag.T_INTEGER, Tag.SEMICOLON),
@@ -46,12 +47,12 @@ class SyntaxAnalyzerTestCase(TestCase):
         # Type⟶t_array
         # Args⟶id
 
-        GrammarRule(NonTerm._START, {
+        GrammarRule(Special.START, {
             (NonTerm.DESCR, Tag.BEGIN, NonTerm.PROG, Tag.END, Tag.DOT)
         }),
         GrammarRule(NonTerm.DESCR, {
             (NonTerm.VARS,),
-            (Tag.LAMBDA,)
+            (Special.LAMBDA,)
         }),
         GrammarRule(NonTerm.VARS, {
             (Tag.VAR, Tag.ID, Tag.ASSIGN, NonTerm.EXPR, Tag.SEMICOLON),
@@ -94,7 +95,7 @@ class SyntaxAnalyzerTestCase(TestCase):
 
         self.assertDictEqual(sa._first, {
             NonTerm.PROG: {Tag.VAR},
-            NonTerm.VARS: {Tag.LAMBDA},
+            NonTerm.VARS: {Special.LAMBDA},
             NonTerm.EXPR: {Tag.T_INTEGER},
         })
 
@@ -102,12 +103,12 @@ class SyntaxAnalyzerTestCase(TestCase):
         sa = SyntaxAnalyzer(None, self.complex_rules)
 
         self.assertSetEqual(
-            sa._first[NonTerm._START],
+            sa._first[Special.START],
             {Tag.BEGIN, Tag.VAR},
         )
         self.assertSetEqual(
             sa._first[NonTerm.DESCR],
-            {Tag.VAR, Tag.LAMBDA},
+            {Tag.VAR, Special.LAMBDA},
             NonTerm.DESCR
         )
         self.assertSetEqual(
@@ -144,7 +145,7 @@ class SyntaxAnalyzerTestCase(TestCase):
         sa = SyntaxAnalyzer(None, self.simple_rules)
 
         self.assertDictEqual(sa._follow, {
-            NonTerm.PROG: {LIMITER},
+            NonTerm.PROG: {Special.LIMITER},
             NonTerm.VARS: {Tag.BEGIN},
             NonTerm.EXPR: {Tag.END},
         })
@@ -153,8 +154,8 @@ class SyntaxAnalyzerTestCase(TestCase):
         sa = SyntaxAnalyzer(None, self.complex_rules)
 
         self.assertSetEqual(
-            sa._follow[NonTerm._START],
-            {LIMITER},
+            sa._follow[Special.START],
+            {Special.LIMITER},
         )
         self.assertSetEqual(
             sa._follow[NonTerm.DESCR],

@@ -1,6 +1,6 @@
 import re
-from transpiler.base import WHITESPACE, Tag, TranspilerError, Token
-from transpiler.settings import LEXER_REGEX_FLAGS
+from transpiler.base import WHITESPACE, TranspilerError, Token
+from transpiler.settings import LEXER_REGEX_FLAGS, Tag
 
 
 class LexerError(TranspilerError):
