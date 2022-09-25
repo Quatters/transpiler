@@ -1,4 +1,3 @@
-from pprint import pprint
 from unittest import TestCase
 from transpiler.base import GrammarRule, Tag, NonTerm
 from transpiler.syntax_analyzer import SyntaxAnalyzer
@@ -76,7 +75,7 @@ class SyntaxAnalyzerTestCase(TestCase):
         })
     ]
 
-    def _test_first_set_simple_rules(self):
+    def test_first_set_simple_rules(self):
         sa = SyntaxAnalyzer(None, self.simple_rules)
         sa._build_first()
 
@@ -89,8 +88,6 @@ class SyntaxAnalyzerTestCase(TestCase):
     def test_first_set_complex_rules(self):
         sa = SyntaxAnalyzer(None, self.complex_rules)
         sa._build_first()
-
-        pprint(sa._first)
 
         self.assertSetEqual(
             sa._first[NonTerm._START],

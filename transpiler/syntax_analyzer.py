@@ -48,7 +48,6 @@ class SyntaxAnalyzer:
     def _build_first(self):
         self._first = {rule.left: set() for rule in self.rules}
 
-
         changed = True
         while changed:
             changed = False
