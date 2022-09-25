@@ -17,7 +17,8 @@ for token in lexer.tokens:
 
 syntax_analyzer = SyntaxAnalyzer(lexer.tokens, GRAMMAR_RULES)
 
-syntax_analyzer._build_first()
-
 print('First set:')
 pprint(syntax_analyzer._first)
+
+print('Follow set:')
+pprint(syntax_analyzer._follow)

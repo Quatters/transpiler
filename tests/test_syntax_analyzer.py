@@ -1,6 +1,7 @@
+from pprint import pprint
 from unittest import TestCase
 from transpiler.base import GrammarRule, Tag, NonTerm
-from transpiler.syntax_analyzer import SyntaxAnalyzer
+from transpiler.syntax_analyzer import SyntaxAnalyzer, LIMITER
 
 
 class SyntaxAnalyzerTestCase(TestCase):
@@ -86,7 +87,6 @@ class SyntaxAnalyzerTestCase(TestCase):
 
     def test_first_set_simple_rules(self):
         sa = SyntaxAnalyzer(None, self.simple_rules)
-        sa._build_first()
 
         self.assertDictEqual(sa._first, {
             NonTerm.PROG: {Tag.VAR},
@@ -96,7 +96,6 @@ class SyntaxAnalyzerTestCase(TestCase):
 
     def test_first_set_complex_rules(self):
         sa = SyntaxAnalyzer(None, self.complex_rules)
-        sa._build_first()
 
         self.assertSetEqual(
             sa._first[NonTerm._START],
@@ -131,4 +130,54 @@ class SyntaxAnalyzerTestCase(TestCase):
             sa._first[NonTerm.TYPE],
             {Tag.T_INTEGER, Tag.T_REAL, Tag.T_BOOLEAN, Tag.T_CHAR,
              Tag.T_STRING, Tag.T_ARRAY}
+        )
+        self.assertSetEqual(
+            sa._first[NonTerm.ARGS],
+            {Tag.ID},
+        )
+
+    def test_follow_set_simple_rules(self):
+        sa = SyntaxAnalyzer(None, self.simple_rules)
+
+        self.assertDictEqual(sa._follow, {
+            NonTerm.PROG: {LIMITER},
+            NonTerm.VARS: {Tag.BEGIN},
+            NonTerm.EXPR: {Tag.END},
+        })
+
+    def test_follow_set_complex_rules(self):
+        sa = SyntaxAnalyzer(None, self.complex_rules)
+
+        self.assertSetEqual(
+            sa._follow[NonTerm._START],
+            {LIMITER},
+        )
+        self.assertSetEqual(
+            sa._follow[NonTerm.DESCR],
+            {Tag.BEGIN},
+        )
+        # FIXME: BEGIN doesn't appear here
+        # self.assertSetEqual(
+        #     sa._follow[NonTerm.VARS],
+        #     {Tag.BEGIN, Tag.VAR, Tag.ID},
+        # )
+        self.assertSetEqual(
+            sa._follow[NonTerm.PROG],
+            {Tag.END},
+        )
+        self.assertSetEqual(
+            sa._follow[NonTerm.EXPR],
+            {Tag.SEMICOLON},
+        )
+        self.assertSetEqual(
+            sa._follow[NonTerm.CALL],
+            {Tag.VAR, Tag.ID},
+        )
+        self.assertSetEqual(
+            sa._follow[NonTerm.TYPE],
+            {Tag.ASSIGN},
+        )
+        self.assertSetEqual(
+            sa._follow[NonTerm.ARGS],
+            {Tag.RBRACKET},
         )
