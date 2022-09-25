@@ -10,12 +10,16 @@ class SyntaxAnalyzer:
     def __init__(
         self,
         tokens: Iterable[Token],
-        rules: list[GrammarRule],
+        rules: Iterable[GrammarRule],
     ):
         self.tokens = tokens
         self.rules = rules
-        self._first: OrderedDict[NonTerm, set[Tag]] = OrderedDict()
+        self._first: OrderedDict[tuple[Tag, NonTerm], set[Tag]] = OrderedDict()
         self._follow: OrderedDict[NonTerm, set[Tag]] = OrderedDict()
+        self._predict_table: dict[
+            NonTerm,
+            dict[Tag | LIMITER, set[GrammarRule]]
+        ] = {}
         self._build_first()
         self._build_follow()
 
@@ -31,6 +35,9 @@ class SyntaxAnalyzer:
             result |= self.first(chain[1:])
 
         return result
+
+    def follow(self, nonterm: NonTerm) -> set[Tag]:
+        return self._follow.get(nonterm, set())
 
     def _build_first(self):
         changed = True
@@ -71,3 +78,34 @@ class SyntaxAnalyzer:
                         if result != self._follow.get(symbol, set()):
                             self._follow[symbol] = result
                             changed = True
+
+    def _build_predict_table(self):
+        for rule in self.rules:
+            for chain in rule.right:
+                for symbol in self.first(chain):
+                    if not isinstance(symbol, Tag):
+                        continue
+                    self._insert_into_predict_table(rule.left, symbol, rule)
+                    if symbol is Tag.LAMBDA:
+                        for fsymbol in self.follow(rule.left):
+                            if not isinstance(symbol, Tag):
+                                continue
+                            self._insert_into_predict_table(
+                                rule.left,
+                                fsymbol,
+                                rule
+                            )
+                            if fsymbol == LIMITER:
+                                self._insert_into_predict_table(
+                                    rule.left,
+                                    LIMITER,
+                                    rule
+                                )
+        print('lol')
+
+    def _insert_into_predict_table(self, key1, key2, rule):
+        val1 = self._predict_table.get(key1, {})
+        self._predict_table[key1] = val1
+        val2 = self._predict_table[key1].get(key2, set())
+        val2.add(rule)
+        self._predict_table[key1][key2] = val2

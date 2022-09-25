@@ -85,6 +85,10 @@ class SyntaxAnalyzerTestCase(TestCase):
         }),
     ]
 
+    math_expressions_rules = [
+
+    ]
+
     def test_first_set_simple_rules(self):
         sa = SyntaxAnalyzer(None, self.simple_rules)
 
@@ -181,3 +185,17 @@ class SyntaxAnalyzerTestCase(TestCase):
             sa._follow[NonTerm.ARGS],
             {Tag.RBRACKET},
         )
+
+    def test_predict_table_simple_rules(self):
+        sa = SyntaxAnalyzer(None, self.simple_rules)
+        sa._build_predict_table()
+
+        print('\n')
+        pprint(sa._predict_table)
+
+    def test_predict_table_complex_rules(self):
+        sa = SyntaxAnalyzer(None, self.complex_rules)
+        sa._build_predict_table()
+
+        print('\n')
+        pprint(sa._predict_table)
