@@ -1,4 +1,4 @@
-from copy import deepcopy
+from collections import OrderedDict
 from typing import Iterable
 from transpiler.base import Tag, NonTerm, Token, GrammarRule
 
@@ -7,7 +7,7 @@ LIMITER = 'LIMITER'
 
 
 class SyntaxAnalyzer:
-    _first = None
+    _first: OrderedDict[NonTerm, set[Tag]] = OrderedDict()
     _follow = None
 
     def __init__(
@@ -18,45 +18,28 @@ class SyntaxAnalyzer:
         self.tokens = tokens
         self.rules = rules
 
-    def _collect_set(
-        self,
-        initial_set: set,
-        symbols: Iterable,
-        additional_set: set
-    ):
-        result = deepcopy(initial_set)
+    def first(self, chain: tuple[Tag, NonTerm]) -> set[Tag]:
+        symbol = chain[0]
+        if isinstance(symbol, Tag):
+            return {symbol}
 
-        for idx, symbol in enumerate(symbols):
-            if isinstance(symbol, NonTerm):
-                result |= {
-                    s for s in self._first.get(symbol, set())
-                    if s != Tag.LAMBDA
-                }
-                if Tag.LAMBDA in self._first.get(symbol, set()):
-                    if idx + 1 < len(symbols) and \
-                        symbols[idx + 1] != Tag.LAMBDA:
-                        continue
-                    result |= additional_set
-                else:
-                    break
-            else:
-                result |= {symbol}
-                break
+        nonterm_first = self._first.get(symbol, set())
+        lambda_in_nonterm_first = Tag.LAMBDA in nonterm_first
+        result = {s for s in nonterm_first if not s is Tag.LAMBDA}
+        if lambda_in_nonterm_first:
+            result |= self.first(chain[1:])
 
         return result
 
-    def _build_first(self):
-        self._first = {rule.left: set() for rule in self.rules}
 
+    def _build_first(self):
         changed = True
         while changed:
             changed = False
             for rule in self.rules:
-                s = self._first.get(rule.left, set())
-                for production in rule.right:
-                    s |= self._collect_set(s, production, {Tag.LAMBDA})
-
-                if (len(self._first.get(rule.left, set())) or -1) != len(s):
-                    self._first[rule.left] = deepcopy(s)
-                    changed = True
-
+                for chain in rule.right:
+                    result = self._first.get(rule.left, set()) \
+                        | self.first(chain)
+                    if result != self._first.get(rule.left, set()):
+                        changed = True
+                        self._first[rule.left] = result
