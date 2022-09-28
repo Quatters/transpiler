@@ -1,5 +1,6 @@
 from typing import Iterable
 from transpiler.base import (
+    Entity,
     Token,
     GrammarRule,
     NonTerminal,
@@ -16,10 +17,12 @@ class SyntaxAnalyzer:
         self._follow = {}
         self._predict_table = {}
         self._build_first()
-        self._build_follow()
+        # self._build_follow()
 
-    def first(self, chain: Iterable[Terminal | NonTerminal]) -> set[Terminal]:
-        symbol = chain[0]
+    def first(self, chain: Entity | Iterable[Entity]) -> set[Terminal]:
+        symbol = chain
+        if isinstance(symbol, (tuple, list)):
+            symbol = symbol[0]
         if isinstance(symbol, Terminal) or symbol is Special.LAMBDA:
             return {symbol}
         nonterm_first = self._first.get(symbol, set())

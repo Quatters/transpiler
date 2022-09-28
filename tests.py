@@ -1,10 +1,25 @@
 from pprint import pprint
 from unittest import TestCase
-from transpiler.base import GrammarRule, Special
+from transpiler.base import GrammarRule, Special, Terminal, NonTerminal
 from transpiler.settings import LEXER_RULES, Tag, NonTerm
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import SyntaxAnalyzer
 
+
+class MathTerminal(Terminal):
+    NUM = 'n',
+    PLUS = '+'
+    MULTIPLY = '*'
+    LBRACKET = '('
+    RBRACKET = ')'
+
+
+class MathNonTerminal(NonTerminal):
+    E = 'E'
+    T = 'T'
+    _E = '_E'
+    _T = '_T'
+    F = 'F'
 
 
 class LexerTestCase(TestCase):
@@ -162,9 +177,71 @@ class SyntaxAnalyzerTestCase(TestCase):
         }),
     ]
 
-    math_expressions_rules = [
-
+    math_expression_rules = [
+        GrammarRule(MathNonTerminal.E, {
+            (MathNonTerminal.T, MathNonTerminal._E)
+        }),
+        GrammarRule(MathNonTerminal._E, {
+            (MathTerminal.PLUS, MathNonTerminal.T, MathNonTerminal._E),
+            (Special.LAMBDA,)
+        }),
+        GrammarRule(MathNonTerminal.T, {
+            (MathNonTerminal.F, MathNonTerminal._T),
+            (MathTerminal.MULTIPLY, MathNonTerminal.F, MathNonTerminal._T),
+        }),
+        GrammarRule(MathNonTerminal.F, {
+            (MathTerminal.LBRACKET, MathNonTerminal.E, MathTerminal.RBRACKET),
+            (MathTerminal.NUM,)
+        })
     ]
+
+    def test_math_expression_rules(self):
+        sa = SyntaxAnalyzer(None, self.math_expression_rules)
+
+        pprint(sa._first)
+
+        self.assertSetEqual(
+            sa.first(MathNonTerminal.E),
+            {MathTerminal.NUM, MathTerminal.LBRACKET}
+        )
+        self.assertSetEqual(
+            sa.first(MathNonTerminal._E),
+            {Special.LAMBDA, MathTerminal.PLUS}
+        )
+        self.assertSetEqual(
+            sa.first(MathNonTerminal.T),
+            {MathTerminal.NUM, MathTerminal.LBRACKET}
+        )
+        self.assertSetEqual(
+            sa.first(MathNonTerminal._T),
+            {Special.LAMBDA, MathTerminal.MULTIPLY}
+        )
+        self.assertSetEqual(
+            sa.first(MathNonTerminal.F),
+            {MathTerminal.NUM, MathTerminal.LBRACKET}
+        )
+
+        self.assertSetEqual(
+            sa.follow(MathNonTerminal.E),
+            {Special.LIMITER, MathTerminal.RBRACKET}
+        )
+        self.assertSetEqual(
+            sa.follow(MathNonTerminal._E),
+            {Special.LIMITER, MathTerminal.RBRACKET}
+        )
+        self.assertSetEqual(
+            sa.follow(MathNonTerminal.T),
+            {Special.LIMITER, MathTerminal.RBRACKET, MathTerminal.PLUS}
+        )
+        self.assertSetEqual(
+            sa.follow(MathNonTerminal._T),
+            {Special.LIMITER, MathTerminal.RBRACKET, MathTerminal.PLUS}
+        )
+        self.assertSetEqual(
+            sa.follow(MathNonTerminal.F),
+            {Special.LIMITER, MathTerminal.RBRACKET, MathTerminal.PLUS,
+             MathTerminal.MULTIPLY}
+        )
 
     def test_first_set_simple_rules(self):
         sa = SyntaxAnalyzer(None, self.simple_rules)

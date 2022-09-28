@@ -11,7 +11,7 @@ class TranspilerError(Exception):
 
 class Entity(Enum):
     def __repr__(self) -> str:
-        return self.value
+        return str(self.value)
 
 
 class Special(Entity):
