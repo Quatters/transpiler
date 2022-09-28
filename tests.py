@@ -7,7 +7,7 @@ from transpiler.syntax_analyzer import SyntaxAnalyzer
 
 
 class MathTerminal(Terminal):
-    NUM = 'n',
+    NUM = 'NUM',
     PLUS = '+'
     MULTIPLY = '*'
     LBRACKET = '('
@@ -187,7 +187,10 @@ class SyntaxAnalyzerTestCase(TestCase):
         }),
         GrammarRule(MathNonTerminal.T, {
             (MathNonTerminal.F, MathNonTerminal._T),
+        }),
+        GrammarRule(MathNonTerminal._T, {
             (MathTerminal.MULTIPLY, MathNonTerminal.F, MathNonTerminal._T),
+            (Special.LAMBDA,)
         }),
         GrammarRule(MathNonTerminal.F, {
             (MathTerminal.LBRACKET, MathNonTerminal.E, MathTerminal.RBRACKET),
@@ -197,8 +200,6 @@ class SyntaxAnalyzerTestCase(TestCase):
 
     def test_math_expression_rules(self):
         sa = SyntaxAnalyzer(None, self.math_expression_rules)
-
-        pprint(sa._first)
 
         self.assertSetEqual(
             sa.first(MathNonTerminal.E),
@@ -314,11 +315,10 @@ class SyntaxAnalyzerTestCase(TestCase):
             sa._follow[NonTerm.DESCR],
             {Tag.BEGIN},
         )
-        # FIXME: BEGIN doesn't appear here
-        # self.assertSetEqual(
-        #     sa._follow[NonTerm.VARS],
-        #     {Tag.BEGIN, Tag.VAR, Tag.ID},
-        # )
+        self.assertSetEqual(
+            sa._follow[NonTerm.VARS],
+            {Tag.BEGIN, Tag.VAR, Tag.ID},
+        )
         self.assertSetEqual(
             sa._follow[NonTerm.PROG],
             {Tag.END},
@@ -344,12 +344,12 @@ class SyntaxAnalyzerTestCase(TestCase):
         sa = SyntaxAnalyzer(None, self.simple_rules)
         sa._build_predict_table()
 
-        print('\n')
-        pprint(sa._predict_table)
+        # print('\n')
+        # pprint(sa._predict_table)
 
     def test_predict_table_complex_rules(self):
         sa = SyntaxAnalyzer(None, self.complex_rules)
         sa._build_predict_table()
 
-        print('\n')
-        pprint(sa._predict_table)
+        # print('\n')
+        # pprint(sa._predict_table)

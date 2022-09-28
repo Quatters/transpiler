@@ -13,21 +13,25 @@ class SyntaxAnalyzer:
     def __init__(self, tokens: Iterable[Token], rules: Iterable[GrammarRule]):
         self.tokens = tokens
         self.rules = rules
-        self._first = {}
-        self._follow = {}
+        self._first: dict[NonTerminal, set[Terminal | Special]] = {}
+        self._follow: dict[NonTerminal, set[Terminal | Special]] = {}
         self._predict_table = {}
         self._build_first()
-        # self._build_follow()
+        self._build_follow()
 
     def first(self, chain: Entity | Iterable[Entity]) -> set[Terminal]:
-        symbol = chain
-        if isinstance(symbol, (tuple, list)):
-            symbol = symbol[0]
+        if isinstance(chain, Entity):
+            chain = (chain,)
+        if len(chain) == 0:
+            return {Special.LAMBDA}
+        symbol = chain[0]
+
         if isinstance(symbol, Terminal) or symbol is Special.LAMBDA:
             return {symbol}
+
         nonterm_first = self._first.get(symbol, set())
         lambda_in_nonterm_first = Special.LAMBDA in nonterm_first
-        result = {s for s in nonterm_first if not s is Special.LAMBDA}
+        result = nonterm_first - {Special.LAMBDA}
         if lambda_in_nonterm_first:
             result |= self.first(chain[1:])
 
@@ -44,16 +48,21 @@ class SyntaxAnalyzer:
                 for chain in rule.right:
                     result = self._first.get(rule.left, set()) \
                         | self.first(chain)
-                    if result != self._first.get(rule.left, set()):
-                        changed = True
+                    if result and result != self._first.get(rule.left, set()):
                         self._first[rule.left] = result
+                        changed = True
 
-    def _build_follow(self):
+    def __get_start_symbol(self):
         start_symbol = self.rules[0].left
-        if not start_symbol is Special.START and \
+        if start_symbol is not Special.START and \
             [rule.left for rule in self.rules
              if rule.left is Special.START]:
                 start_symbol = Special.START
+        return start_symbol
+
+
+    def _build_follow(self):
+        start_symbol = self.__get_start_symbol()
         self._follow[start_symbol] = {Special.LIMITER}
 
         changed = True
@@ -65,15 +74,14 @@ class SyntaxAnalyzer:
                         if not isinstance(symbol, NonTerminal):
                             continue
                         after_chain = chain[idx + 1:]
-                        after_chain_first = set()
-                        if after_chain:
-                            after_chain_first = self.first(after_chain)
-                        lambda_in_after_chain = Special.LAMBDA in after_chain
+                        after_chain_first = self.first(after_chain)
+                        lambda_in_after_chain = \
+                            Special.LAMBDA in after_chain_first
                         result = self._follow.get(symbol, set()) \
-                            | after_chain_first
+                            | after_chain_first - {Special.LAMBDA}
                         if lambda_in_after_chain:
-                            result |= self._follow[rule.left]
-                        if result != self._follow.get(symbol, set()):
+                            result |= self._follow.get(rule.left, set())
+                        if result and result != self._follow.get(symbol, set()):
                             self._follow[symbol] = result
                             changed = True
 
