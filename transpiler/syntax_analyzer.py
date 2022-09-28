@@ -60,7 +60,6 @@ class SyntaxAnalyzer:
                 start_symbol = Special.START
         return start_symbol
 
-
     def _build_follow(self):
         start_symbol = self.__get_start_symbol()
         self._follow[start_symbol] = {Special.LIMITER}

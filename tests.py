@@ -201,6 +201,7 @@ class SyntaxAnalyzerTestCase(TestCase):
     def test_math_expression_rules(self):
         sa = SyntaxAnalyzer(None, self.math_expression_rules)
 
+        # check FIRST
         self.assertSetEqual(
             sa.first(MathNonTerminal.E),
             {MathTerminal.NUM, MathTerminal.LBRACKET}
@@ -222,6 +223,7 @@ class SyntaxAnalyzerTestCase(TestCase):
             {MathTerminal.NUM, MathTerminal.LBRACKET}
         )
 
+        # check FOLLOW
         self.assertSetEqual(
             sa.follow(MathNonTerminal.E),
             {Special.LIMITER, MathTerminal.RBRACKET}
@@ -243,6 +245,10 @@ class SyntaxAnalyzerTestCase(TestCase):
             {Special.LIMITER, MathTerminal.RBRACKET, MathTerminal.PLUS,
              MathTerminal.MULTIPLY}
         )
+
+        # check predict table
+        sa._build_predict_table()
+        pprint(sa._predict_table)
 
     def test_first_set_simple_rules(self):
         sa = SyntaxAnalyzer(None, self.simple_rules)
