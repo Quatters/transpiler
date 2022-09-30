@@ -1,26 +1,38 @@
-from typing import Iterable
+from functools import lru_cache
+import logging
+from typing import Any, Generator, Iterable
 from transpiler.base import (
-    Entity,
+    NormalizedGrammarRule,
+    Symbol,
     Token,
     GrammarRule,
     NonTerminal,
     Terminal,
     Special,
+    TranspilerError,
+    normalize_rules,
 )
 
 
+logger = logging.getLogger(__name__)
+
+
+class SyntaxError(TranspilerError):
+    pass
+
+
 class SyntaxAnalyzer:
-    def __init__(self, tokens: Iterable[Token], rules: Iterable[GrammarRule]):
-        self.tokens = tokens
+    def __init__(self, rules: list[GrammarRule] | tuple[GrammarRule]):
         self.rules = rules
         self._first: dict[NonTerminal, set[Terminal | Special]] = {}
         self._follow: dict[NonTerminal, set[Terminal | Special]] = {}
-        self._predict_table = {}
+        self._predict_table: dict[NonTerminal, dict[Terminal, GrammarRule]] = {}
         self._build_first()
         self._build_follow()
+        self._build_predict_table()
 
-    def first(self, chain: Entity | Iterable[Entity]) -> set[Terminal]:
-        if isinstance(chain, Entity):
+    def first(self, chain: Symbol | tuple) -> set[Terminal]:
+        if isinstance(chain, Symbol):
             chain = (chain,)
         if len(chain) == 0:
             return {Special.LAMBDA}
@@ -52,6 +64,7 @@ class SyntaxAnalyzer:
                         self._first[rule.left] = result
                         changed = True
 
+    @lru_cache
     def __get_start_symbol(self):
         start_symbol = self.rules[0].left
         if start_symbol is not Special.START and \
@@ -85,31 +98,73 @@ class SyntaxAnalyzer:
                             changed = True
 
     def _build_predict_table(self):
-        for rule in self.rules:
-            for chain in rule.right:
-                for symbol in self.first(chain):
-                    if not isinstance(symbol, Terminal):
-                        continue
+        for rule in normalize_rules(self.rules):
+            right_first = self.first(rule.right)
+            for symbol in right_first:
+                if isinstance(symbol, NonTerminal):
+                    continue
+                if isinstance(symbol, Terminal):
                     self._insert_into_predict_table(rule.left, symbol, rule)
-                    if symbol is Special.LAMBDA:
-                        for fsymbol in self.follow(rule.left):
-                            if not isinstance(symbol, Terminal):
-                                continue
+                if Special.LAMBDA in right_first:
+                    follow_left = self.follow(rule.left)
+                    for fsymbol in follow_left:
+                        if fsymbol is Special.LIMITER:
                             self._insert_into_predict_table(
                                 rule.left,
                                 fsymbol,
                                 rule
                             )
-                            if fsymbol is Special.LIMITER:
-                                self._insert_into_predict_table(
-                                    rule.left,
-                                    Special.LIMITER,
-                                    rule
-                                )
+                        if not isinstance(fsymbol, Terminal):
+                            continue
+                        self._insert_into_predict_table(
+                            rule.left,
+                            fsymbol,
+                            rule
+                        )
 
     def _insert_into_predict_table(self, key1, key2, rule):
         val1 = self._predict_table.get(key1, {})
         self._predict_table[key1] = val1
-        val2 = self._predict_table[key1].get(key2, set())
-        val2.add(rule)
-        self._predict_table[key1][key2] = val2
+        val2 = self._predict_table[key1].get(key2)
+        if val2 is not None:
+            if isinstance(val2, list):
+                val2.append(rule)
+                self._predict_table[key1][key2] = val2
+            else:
+                self._predict_table[key1][key2] = [val2, rule]
+            logger.warning(
+                f'Provided grammar is not LL(1) since [{key1}][{key2}] got '
+                f'multiple rules: \n{self._predict_table[key1][key2]}'
+            )
+        else:
+            self._predict_table[key1][key2] = rule
+
+    def predict(self, key1, key2) -> NormalizedGrammarRule:
+        val1 = self._predict_table.get(key1)
+        if val1 is None:
+            return None
+        return self._predict_table[key1].get(key2)
+
+    def parse(self, tokens: Generator[Token, Any, Any]):
+        stack = [self.__get_start_symbol(), Special.LIMITER]
+        token = tokens.__next__()
+        head = self.__get_start_symbol()
+
+        while head != Special.LIMITER:
+            current_token = token
+            if head == token.tag:
+                stack.pop(0)
+                logger.debug(f'parsed token {token}')
+                token = tokens.__next__()
+            elif isinstance(head, Terminal):
+                raise SyntaxError
+            elif (rule := self.predict(head, current_token.tag)) is None:
+                raise SyntaxError
+            else:
+                logger.debug(f'using rule {rule}')
+                stack.pop(0)
+                for symbol in reversed(rule.right):
+                    if symbol is Special.LAMBDA:
+                        continue
+                    stack.insert(0, symbol)
+            head = stack[0]

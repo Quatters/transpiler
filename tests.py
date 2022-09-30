@@ -1,6 +1,13 @@
 from pprint import pprint
 from unittest import TestCase
-from transpiler.base import GrammarRule, Special, Terminal, NonTerminal
+from transpiler.base import (
+    Token,
+    GrammarRule,
+    NormalizedGrammarRule,
+    Special,
+    Terminal,
+    NonTerminal,
+)
 from transpiler.settings import LEXER_RULES, Tag, NonTerm
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import SyntaxAnalyzer
@@ -198,8 +205,43 @@ class SyntaxAnalyzerTestCase(TestCase):
         })
     ]
 
+    normalized_math_expression_rules = [
+        NormalizedGrammarRule(
+            MathNonTerminal.E,
+            (MathNonTerminal.T, MathNonTerminal._E)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal._E,
+            (MathTerminal.PLUS, MathNonTerminal.T, MathNonTerminal._E)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal._E,
+            (Special.LAMBDA,)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal.T,
+            (MathNonTerminal.F, MathNonTerminal._T)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal._T,
+            (MathTerminal.MULTIPLY, MathNonTerminal.F, MathNonTerminal._T)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal._T,
+            (Special.LAMBDA,)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal.F,
+            (MathTerminal.NUM,)
+        ),
+        NormalizedGrammarRule(
+            MathNonTerminal.F,
+            (MathTerminal.LBRACKET, MathNonTerminal.E, MathTerminal.RBRACKET)
+        ),
+    ]
+
     def test_math_expression_rules(self):
-        sa = SyntaxAnalyzer(None, self.math_expression_rules)
+        sa = SyntaxAnalyzer(self.math_expression_rules)
 
         # check FIRST
         self.assertSetEqual(
@@ -247,11 +289,76 @@ class SyntaxAnalyzerTestCase(TestCase):
         )
 
         # check predict table
-        sa._build_predict_table()
-        pprint(sa._predict_table)
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal.E][MathTerminal.NUM],
+            self.normalized_math_expression_rules[0],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal.E][MathTerminal.LBRACKET],
+            self.normalized_math_expression_rules[0],
+        )
+
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._E][MathTerminal.PLUS],
+            self.normalized_math_expression_rules[1],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._E][MathTerminal.RBRACKET],
+            self.normalized_math_expression_rules[2],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._E][Special.LIMITER],
+            self.normalized_math_expression_rules[2],
+        )
+
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal.T][MathTerminal.NUM],
+            self.normalized_math_expression_rules[3],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal.T][MathTerminal.LBRACKET],
+            self.normalized_math_expression_rules[3],
+        )
+
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._T][MathTerminal.PLUS],
+            self.normalized_math_expression_rules[5],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._T][MathTerminal.MULTIPLY],
+            self.normalized_math_expression_rules[4],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._T][MathTerminal.RBRACKET],
+            self.normalized_math_expression_rules[5],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal._T][Special.LIMITER],
+            self.normalized_math_expression_rules[5],
+        )
+
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal.F][MathTerminal.NUM],
+            self.normalized_math_expression_rules[6],
+        )
+        self.assertEqual(
+            sa._predict_table[MathNonTerminal.F][MathTerminal.LBRACKET],
+            self.normalized_math_expression_rules[7],
+        )
+
+        # check parsing
+        def tokens():
+            yield Token(MathTerminal.NUM, '1', 0)
+            yield Token(MathTerminal.PLUS, '+', 0)
+            yield Token(MathTerminal.NUM, '2', 0)
+            yield Token(MathTerminal.MULTIPLY, '*', 0)
+            yield Token(MathTerminal.NUM, '3', 0)
+            yield Token(Special.LIMITER, None, -1)
+
+        sa.parse(tokens())
 
     def test_first_set_simple_rules(self):
-        sa = SyntaxAnalyzer(None, self.simple_rules)
+        sa = SyntaxAnalyzer(self.simple_rules)
 
         self.assertDictEqual(sa._first, {
             NonTerm.PROG: {Tag.VAR},
@@ -260,7 +367,7 @@ class SyntaxAnalyzerTestCase(TestCase):
         })
 
     def test_first_set_complex_rules(self):
-        sa = SyntaxAnalyzer(None, self.complex_rules)
+        sa = SyntaxAnalyzer(self.complex_rules)
 
         self.assertSetEqual(
             sa._first[Special.START],
@@ -302,7 +409,7 @@ class SyntaxAnalyzerTestCase(TestCase):
         )
 
     def test_follow_set_simple_rules(self):
-        sa = SyntaxAnalyzer(None, self.simple_rules)
+        sa = SyntaxAnalyzer(self.simple_rules)
 
         self.assertDictEqual(sa._follow, {
             NonTerm.PROG: {Special.LIMITER},
@@ -311,7 +418,7 @@ class SyntaxAnalyzerTestCase(TestCase):
         })
 
     def test_follow_set_complex_rules(self):
-        sa = SyntaxAnalyzer(None, self.complex_rules)
+        sa = SyntaxAnalyzer(self.complex_rules)
 
         self.assertSetEqual(
             sa._follow[Special.START],
@@ -347,14 +454,14 @@ class SyntaxAnalyzerTestCase(TestCase):
         )
 
     def test_predict_table_simple_rules(self):
-        sa = SyntaxAnalyzer(None, self.simple_rules)
+        sa = SyntaxAnalyzer(self.simple_rules)
         sa._build_predict_table()
 
         # print('\n')
         # pprint(sa._predict_table)
 
     def test_predict_table_complex_rules(self):
-        sa = SyntaxAnalyzer(None, self.complex_rules)
+        sa = SyntaxAnalyzer(self.complex_rules)
         sa._build_predict_table()
 
         # print('\n')

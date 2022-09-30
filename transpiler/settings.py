@@ -1,4 +1,6 @@
+import os
 import re
+import logging
 
 from transpiler.base import (
     Terminal,
@@ -6,6 +8,11 @@ from transpiler.base import (
     LexerRule,
     GrammarRule,
     Special,
+)
+
+logging.basicConfig(
+    format='%(levelname)s:[%(module)s:%(lineno)d]: %(message)s',
+    level=os.getenv('LOG_LEVEL', logging.WARNING),
 )
 
 
