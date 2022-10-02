@@ -17,6 +17,10 @@ from transpiler.base import (
 logger = logging.getLogger(__name__)
 
 
+class GrammarError(TranspilerError):
+    pass
+
+
 class SyntaxError(TranspilerError):
     pass
 
@@ -126,15 +130,11 @@ class SyntaxAnalyzer:
         val1 = self._predict_table.get(key1, {})
         self._predict_table[key1] = val1
         val2 = self._predict_table[key1].get(key2)
-        if val2 is not None:
-            if isinstance(val2, list):
-                val2.append(rule)
-                self._predict_table[key1][key2] = val2
-            else:
-                self._predict_table[key1][key2] = [val2, rule]
-            logger.warning(
+        if val2 is not None and val2 != rule:
+            raise GrammarError(
                 f'Provided grammar is not LL(1) since [{key1}][{key2}] got '
-                f'multiple rules: \n{self._predict_table[key1][key2]}'
+                f'multiple rules: \n{self._predict_table[key1][key2]} '
+                f'and {rule}'
             )
         else:
             self._predict_table[key1][key2] = rule
@@ -156,10 +156,11 @@ class SyntaxAnalyzer:
                 stack.pop(0)
                 logger.debug(f'parsed token {token}')
                 token = tokens.__next__()
-            elif isinstance(head, Terminal):
-                raise SyntaxError
-            elif (rule := self.predict(head, current_token.tag)) is None:
-                raise SyntaxError
+            elif isinstance(head, Terminal) or \
+                (rule := self.predict(head, current_token.tag)) is None:
+                raise SyntaxError(
+                    f'{current_token} at line {current_token.line}'
+                )
             else:
                 logger.debug(f'using rule {rule}')
                 stack.pop(0)
