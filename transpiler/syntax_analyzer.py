@@ -159,9 +159,15 @@ class SyntaxAnalyzer:
             elif isinstance(head, Terminal) or \
                 (rule := self.predict(head, current_token.tag)) is None:
                 logger.debug(f'head: {head}, rule: {rule}')
-                raise SyntaxError(
-                    f'{current_token} at line {current_token.line}'
+                expected_token = head.value.replace('_', ' ')
+
+                msg = (
+                    f"'{current_token}' at line {current_token.line}. "
+                    f"Expected '{expected_token}'."
                 )
+                if current_token.tag is Special.LIMITER:
+                    msg = f'unexpected end of string.'
+                raise SyntaxError(msg)
             else:
                 logger.debug(f'using rule {rule}')
                 stack.pop(0)

@@ -72,16 +72,8 @@ class Lexer:
             return token
 
         raise UnexpectedTokenError(
-            f'{self.buffer[self.pos]} at line {self._get_line()}'
+            f"'{self.buffer[self.pos]}' at line {self._get_line()}."
         )
 
     def _get_line(self):
         return self.buffer.count('\n', 0, self.pos) + 1
-
-    def _get_error_area(self):
-        area = self.buffer[self.pos - 15:self.pos + 15].rstrip('\n ')
-        pointer = ' ' * 19 + '^'
-        while area.startswith(' '):
-            area = area[1:]
-            pointer = pointer[1:]
-        return f'\n\n... {area} ...' + '\n' + pointer
