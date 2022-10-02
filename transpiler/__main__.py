@@ -43,6 +43,7 @@ class Tag(Terminal):
     UNTIL = 'until'
     DO = 'do'
     TO = 'to'
+    DOWNTO = 'downto'
     BEGIN = 'begin'
     END = 'end'
     PROCEDURE = 'procedure'
@@ -54,6 +55,8 @@ class NT(NonTerminal):
     DEFINE_VAR = 'DEFINE_VAR'
     DEFINE_VARS_RECURSIVE = 'DEFINE_VARS_RECURSIVE'
     DEFINE_VAR_ASSIGNMENT = 'DEFINE_VAR_ASSIGNMENT'
+    OPTIONAL_DEFINE_VAR_ASSIGNMENT = 'OPTIONAL_DEFINE_VAR_ASSIGNMENT'
+    DEFINE_INLINE_VAR = 'DEFINE_INLINE_VAR'
     ANY_ASSIGN = 'ANY_ASSIGN'
     OPERATOR = 'OPERATOR'
 
@@ -85,6 +88,8 @@ class NT(NonTerminal):
     IF_BLOCK_RIGHT = 'IF_BLOCK_RIGHT'
 
     FOR_LOOP_BLOCK = 'FOR_LOOP_BLOCK'
+    FOR_LOOP_KEY = 'FOR_LOOP_KEY'
+
     REPEAT_LOOP_BLOCK = 'REPEAT_LOOP_BLOCK'
     WHILE_LOOP_BLOCK = 'WHILE_LOOP_BLOCK'
 
@@ -119,9 +124,11 @@ LEXER_RULES = [
     LexerRule(Tag.OF, r'\bof\b'),
     LexerRule(Tag.FOR, r'\bfor\b'),
     LexerRule(Tag.WHILE, r'\bwhile\b'),
+    LexerRule(Tag.REPEAT, r'\brepeat\b'),
     LexerRule(Tag.UNTIL, r'\buntil\b'),
     LexerRule(Tag.DO, r'\bdo\b'),
     LexerRule(Tag.TO, r'\bto\b'),
+    LexerRule(Tag.DOWNTO, r'\bdownto\b'),
     LexerRule(Tag.BEGIN, r'\bbegin\b'),
     LexerRule(Tag.END, r'\bend\b'),
     LexerRule(Tag.PROCEDURE, r'\bprocedure\b'),
@@ -155,13 +162,25 @@ GRAMMAR_RULES = [
             Tag.ID,
             Tag.COLON,
             Tag.TYPE_HINT,
-            NT.DEFINE_VAR_ASSIGNMENT,
+            NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT,
             Tag.SEMICOLON,
         ),
     }),
-    GrammarRule(NT.DEFINE_VAR_ASSIGNMENT, {
+    GrammarRule(NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT, {
         (Tag.ASSIGN, NT.ABSTRACT_EXPR),
         (Special.LAMBDA,)
+    }),
+    GrammarRule(NT.DEFINE_VAR_ASSIGNMENT, {
+        (Tag.ASSIGN, NT.ABSTRACT_EXPR),
+    }),
+    GrammarRule(NT.DEFINE_INLINE_VAR, {
+        (
+            Tag.VAR,
+            Tag.ID,
+            Tag.COLON,
+            Tag.TYPE_HINT,
+            NT.DEFINE_VAR_ASSIGNMENT,
+        ),
     }),
 
     GrammarRule(NT.ABSTRACT_EXPR, {
@@ -181,7 +200,7 @@ GRAMMAR_RULES = [
 
     # boolean and math expressions
     GrammarRule(NT.ABSTRACT_COMPLEX_EXPR, {
-        (NT.ABSTRACT_COMPLEX_EXPR_VALUE, NT.ABSTRACT_COMPLEX_EXPR_RIGHT)
+        (NT.ABSTRACT_COMPLEX_EXPR_VALUE, NT.ABSTRACT_COMPLEX_EXPR_RIGHT),
     }),
     GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_RIGHT, {
         (
@@ -232,14 +251,17 @@ GRAMMAR_RULES = [
     }),
     GrammarRule(NT.BODY, {
         (NT.DEFINE_VAR, NT.BODY),
-        (NT.ABSTRACT_STATEMENT, NT.BODY),
+        (NT.ABSTRACT_STATEMENT, Tag.SEMICOLON, NT.BODY),
         (NT.IF_BLOCK, NT.BODY),
+        (NT.FOR_LOOP_BLOCK, NT.BODY),
+        (NT.WHILE_LOOP_BLOCK, NT.BODY),
+        (NT.REPEAT_LOOP_BLOCK, NT.BODY),
         (Special.LAMBDA,),
     }),
 
     # any statement except variable defining
     GrammarRule(NT.ABSTRACT_STATEMENT, {
-        (Tag.ID, NT.ABSTRACT_STATEMENT_RIGHT, Tag.SEMICOLON),
+        (Tag.ID, NT.ABSTRACT_STATEMENT_RIGHT),
     }),
     GrammarRule(NT.ABSTRACT_STATEMENT_RIGHT, {
         (NT.CALL,),
@@ -281,14 +303,6 @@ GRAMMAR_RULES = [
     GrammarRule(NT.IF_BLOCK_RIGHT, {
         (NT.ABSTRACT_COMPLEX_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
     }),
-    GrammarRule(NT.OPTIONAL_ELSE_BLOCK, {
-        (Tag.ELSE, NT.ELSE_BLOCK_RIGHT),
-        (Special.LAMBDA,)
-    }),
-    GrammarRule(NT.ELSE_BLOCK_RIGHT, {
-        (NT.ELIF_BLOCK,),
-        (NT.ELSE_BLOCK,),
-    }),
     GrammarRule(NT.ELIF_BLOCK, {
         (Tag.IF, NT.IF_BLOCK_RIGHT),
         (Special.LAMBDA,)
@@ -300,7 +314,35 @@ GRAMMAR_RULES = [
 
     # for loops with to or downto word
     GrammarRule(NT.FOR_LOOP_BLOCK, {
-        (Tag.FOR, NT.DEFINE_VAR, )
+        (
+            Tag.FOR,
+            NT.DEFINE_INLINE_VAR,
+            NT.FOR_LOOP_KEY,
+            NT.ABSTRACT_EXPR,
+            Tag.DO,
+            NT.COMPLEX_OP_BODY,
+            Tag.SEMICOLON,
+        ),
+    }),
+    GrammarRule(NT.FOR_LOOP_KEY, {
+        (Tag.TO,),
+        (Tag.DOWNTO,)
+    }),
+
+    # while loops
+    GrammarRule(NT.WHILE_LOOP_BLOCK, {
+        (
+            Tag.WHILE,
+            NT.ABSTRACT_EXPR,
+            Tag.DO,
+            NT.COMPLEX_OP_BODY,
+            Tag.SEMICOLON
+        )
+    }),
+
+    # repeat loops
+    GrammarRule(NT.REPEAT_LOOP_BLOCK, {
+        (Tag.REPEAT, NT.BODY, Tag.UNTIL, NT.ABSTRACT_EXPR, Tag.SEMICOLON),
     })
 ]
 

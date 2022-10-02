@@ -24,6 +24,7 @@ end;
 for var i: integer := 1 to 3 do
 begin
     var1 += 1;
+    var3 := 'a';
 end;
 
 for var j: integer := 3 downto 1 do
@@ -36,9 +37,9 @@ repeat
     var1 += 1;
 until true;
 
-var var_abs := abs(-1);
-var var_sqr := sqr(2);
-var var_sqrt := sqrt(4.0);
-var var_exp := exp(2);
+var1 := abs(-1);
+var var_sqr: integer := sqr(2);
+var var_sqrt: real := sqrt(4.0);
+var var_exp: real := exp(2);
 
 end.
