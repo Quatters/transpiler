@@ -51,43 +51,50 @@ class Tag(Terminal):
 
 class NT(NonTerminal):
     VARS = 'VARS'
-    DEFINE_VARS = 'DEFINE_VARS'
+    DEFINE_VAR = 'DEFINE_VAR'
+    DEFINE_VARS_RECURSIVE = 'DEFINE_VARS_RECURSIVE'
     DEFINE_VAR_ASSIGNMENT = 'DEFINE_VAR_ASSIGNMENT'
     ANY_ASSIGN = 'ANY_ASSIGN'
     OPERATOR = 'OPERATOR'
 
     ABSTRACT_EXPR = 'ABSTRACT_EXPR'
-    ABSTRACT_COMPLEX_EXPR = 'ABSTRACT_COMPLEX_EXPR'
 
     STRING_EXPR = 'STRING_EXPR'
     STRING_PART = 'STRING_PART'
 
-    MATH_EXPR = 'MATH_EXPR'
-    MATH_EXPR_RIGHT = 'MATH_EXPR_RIGHT'
-    MATH_EXPR_VALUE = 'MATH_EXPR_VALUE'
-    NUMBER = 'NUMBER'
+    ABSTRACT_COMPLEX_EXPR = 'ABSTRACT_COMPLEX_EXPR'
+    ABSTRACT_COMPLEX_EXPR_RIGHT = 'ABSTRACT_COMPLEX_EXPR_RIGHT'
+    ABSTRACT_COMPLEX_EXPR_VALUE = 'ABSTRACT_COMPLEX_EXPR_VALUE'
+    ABSTRACT_COMPLEX_EXPR_OP = 'ABSTRACT_COMPLEX_EXPR_OP'
+    ABSTRACT_COMPLEX_EXPR_WITH_NOT = 'ABSTRACT_COMPLEX_EXPR_WITH_NOT'
 
-    BOOLEAN_EXPR = 'BOOLEAN_EXPR'
-    BOOLEAN_EXPR_RIGHT = 'BOOLEAN_EXPR_RIGHT'
-    BOOLEAN_EXPR_VALUE = 'BOOLEAN_EXPR_VALUE'
+    NUMBER = 'NUMBER'
     BOOLEAN_OPTIONAL_NOT = 'BOOLEAN_OPTIONAL_NOT'
+    OPTIONAL_COMPARISON = 'OPTIONAL_COMPARISON'
+    COMPARABLE = 'COMPARABLE'
 
     PROG = 'PROG'
     BODY = 'BODY'
     COMPLEX_OP_BODY = 'COMPLEX_OP_BODY'
 
     IF_BLOCK = 'IF_BLOCK'
+    OPTIONAL_ELSE_BLOCK = 'OPTIONAL_ELSE_BLOCK'
+    ELSE_BLOCK_RIGHT = 'ELSE_BLOCK_RIGHT'
     ELIF_BLOCK = 'ELIF_BLOCK'
     ELSE_BLOCK = 'ELSE_BLOCK'
-    IF_BLOCK_HELPER = 'IF_BLOCK_HELPER'
+    IF_BLOCK_RIGHT = 'IF_BLOCK_RIGHT'
 
     FOR_LOOP_BLOCK = 'FOR_LOOP_BLOCK'
     REPEAT_LOOP_BLOCK = 'REPEAT_LOOP_BLOCK'
     WHILE_LOOP_BLOCK = 'WHILE_LOOP_BLOCK'
 
     ABSTRACT_STATEMENT = 'ABSTRACT_STATEMENT'
-    ABSTRACT_STATEMENT_HELPER = 'ABSTRACT_STATEMENT_HELPER'
+    ABSTRACT_STATEMENT_RIGHT = 'ABSTRACT_STATEMENT_RIGHT'
+
     CALL = 'CALL'
+    CALL_ARGS = 'CALL_ARGS'
+    CALL_ARGS_RIGHT = 'CALL_ARGS_RIGHT'
+
     MANIPULATE_VAR = 'MANIPULATE_VAR'
 
 
@@ -134,24 +141,23 @@ LEXER_RULES = [
 
 GRAMMAR_RULES = [
     GrammarRule(Special.START, {
-        (NT.VARS, NT.PROG),
+        (NT.DEFINE_VARS_RECURSIVE, NT.PROG),
     }),
 
     # vars
-    GrammarRule(NT.VARS, {
-        (Tag.VAR, NT.DEFINE_VARS, NT.VARS),
-        (Special.LAMBDA,)
+    GrammarRule(NT.DEFINE_VARS_RECURSIVE, {
+        (NT.DEFINE_VAR, NT.DEFINE_VARS_RECURSIVE),
+        (Special.LAMBDA,),
     }),
-    GrammarRule(NT.DEFINE_VARS, {
+    GrammarRule(NT.DEFINE_VAR, {
         (
+            Tag.VAR,
             Tag.ID,
             Tag.COLON,
             Tag.TYPE_HINT,
             NT.DEFINE_VAR_ASSIGNMENT,
             Tag.SEMICOLON,
-            NT.DEFINE_VARS
         ),
-        (Special.LAMBDA,)
     }),
     GrammarRule(NT.DEFINE_VAR_ASSIGNMENT, {
         (Tag.ASSIGN, NT.ABSTRACT_EXPR),
@@ -159,11 +165,11 @@ GRAMMAR_RULES = [
     }),
 
     GrammarRule(NT.ABSTRACT_EXPR, {
-        (NT.MATH_EXPR,),
-        # (NT.BOOLEAN_EXPR,),
+        (NT.ABSTRACT_COMPLEX_EXPR,),
         (NT.STRING_EXPR,),
     }),
 
+    # strings
     GrammarRule(NT.STRING_EXPR, {
         (Tag.QUOTE, NT.STRING_PART, Tag.QUOTE),
     }),
@@ -173,46 +179,48 @@ GRAMMAR_RULES = [
         {(tag, NT.STRING_PART) for tag in Tag if tag is not Tag.QUOTE}
     ),
 
-    GrammarRule(NT.MATH_EXPR, {
-        (NT.MATH_EXPR_VALUE, NT.MATH_EXPR_RIGHT),
+    # boolean and math expressions
+    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR, {
+        (NT.ABSTRACT_COMPLEX_EXPR_VALUE, NT.ABSTRACT_COMPLEX_EXPR_RIGHT)
     }),
-    GrammarRule(NT.MATH_EXPR_RIGHT, {
-        (Tag.MATH_OPERATOR, NT.MATH_EXPR_VALUE, NT.MATH_EXPR_RIGHT),
-        (Special.LAMBDA,),
+    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_RIGHT, {
+        (
+            NT.ABSTRACT_COMPLEX_EXPR_OP,
+            NT.ABSTRACT_COMPLEX_EXPR_VALUE,
+            NT.ABSTRACT_COMPLEX_EXPR_RIGHT,
+        ),
+        (Special.LAMBDA,)
     }),
-    GrammarRule(NT.MATH_EXPR_VALUE, {
-        (Tag.ID,),
-        (NT.NUMBER,),
-        (Tag.LBRACKET, NT.MATH_EXPR, Tag.RBRACKET),
+    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_VALUE, {
+        (NT.NUMBER, NT.OPTIONAL_COMPARISON),
+        (Tag.ID, NT.OPTIONAL_COMPARISON),
+        (Tag.BOOLEAN_VALUE, NT.OPTIONAL_COMPARISON),
+        (NT.BOOLEAN_OPTIONAL_NOT, NT.ABSTRACT_COMPLEX_EXPR_WITH_NOT),
+    }),
+    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_OP, {
+        (Tag.MATH_OPERATOR,),
+        (Tag.BOOLEAN_OPERATOR,),
     }),
     GrammarRule(NT.NUMBER, {
         (Tag.NUMBER_INT,),
         (Tag.NUMBER_FLOAT,),
     }),
-
-    # GrammarRule(NT.BOOLEAN_EXPR, {
-    #     (
-    #         # NT.BOOLEAN_OPTIONAL_NOT,
-    #         Tag.LBRACKET,
-    #         # NT.BOOLEAN_OPTIONAL_NOT,
-    #         NT.BOOLEAN_EXPR_VALUE,
-    #         Tag.RBRACKET,
-    #         NT.BOOLEAN_EXPR_RIGHT,
-    #     )
-    # }),
-    # GrammarRule(NT.BOOLEAN_EXPR_RIGHT, {
-    #     (Tag.BOOLEAN_OPERATOR, NT.BOOLEAN_EXPR),
-    #     (Special.LAMBDA,),
-    # }),
-    # GrammarRule(NT.BOOLEAN_EXPR_VALUE, {
-    #     (Tag.ID,),
-    #     (Tag.BOOLEAN_VALUE,),
-    #     (NT.MATH_EXPR, Tag.COMPARE, NT.MATH_EXPR),
-    # }),
-    # GrammarRule(NT.BOOLEAN_OPTIONAL_NOT, {
-    #     (Tag.BOOLEAN_NOT,),
-    #     (Special.LAMBDA,),
-    # }),
+    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_WITH_NOT, {
+        (Tag.LBRACKET, NT.ABSTRACT_COMPLEX_EXPR, Tag.RBRACKET),
+    }),
+    GrammarRule(NT.BOOLEAN_OPTIONAL_NOT, {
+        (Tag.BOOLEAN_NOT,),
+        (Special.LAMBDA,),
+    }),
+    GrammarRule(NT.OPTIONAL_COMPARISON, {
+        (Tag.COMPARE, NT.COMPARABLE),
+        (Special.LAMBDA,)
+    }),
+    GrammarRule(NT.COMPARABLE, {
+        (Tag.ID,),
+        (Tag.BOOLEAN_VALUE,),
+        (NT.NUMBER,),
+    }),
 
     # prog
     GrammarRule(NT.PROG, {
@@ -223,18 +231,22 @@ GRAMMAR_RULES = [
         (NT.ABSTRACT_STATEMENT,)
     }),
     GrammarRule(NT.BODY, {
+        (NT.DEFINE_VAR, NT.BODY),
         (NT.ABSTRACT_STATEMENT, NT.BODY),
+        (NT.IF_BLOCK, NT.BODY),
         (Special.LAMBDA,),
     }),
 
+    # any statement except variable defining
     GrammarRule(NT.ABSTRACT_STATEMENT, {
-        (Tag.ID, NT.ABSTRACT_STATEMENT_HELPER, Tag.SEMICOLON),
+        (Tag.ID, NT.ABSTRACT_STATEMENT_RIGHT, Tag.SEMICOLON),
     }),
-    GrammarRule(NT.ABSTRACT_STATEMENT_HELPER, {
+    GrammarRule(NT.ABSTRACT_STATEMENT_RIGHT, {
         (NT.CALL,),
         (NT.MANIPULATE_VAR,),
     }),
 
+    # do something with existing variable
     GrammarRule(NT.MANIPULATE_VAR, {
         (NT.ANY_ASSIGN, NT.ABSTRACT_EXPR),
     }),
@@ -243,24 +255,52 @@ GRAMMAR_RULES = [
         (Tag.OP_ASSIGN,),
     }),
 
+    # call function with or without arguments
+    GrammarRule(NT.CALL, {
+        (Tag.LBRACKET, NT.CALL_ARGS, Tag.RBRACKET),
+    }),
+    GrammarRule(NT.CALL_ARGS, {
+        (NT.ABSTRACT_EXPR, NT.CALL_ARGS_RIGHT),
+        (Special.LAMBDA,)
+    }),
+    GrammarRule(NT.CALL_ARGS_RIGHT, {
+        (Tag.COMMA, NT.ABSTRACT_EXPR),
+        (Special.LAMBDA,)
+    }),
+
+    # if blocks, with optional else if and else
     GrammarRule(NT.IF_BLOCK, {
         (
             Tag.IF,
-            NT.IF_BLOCK_HELPER,
+            NT.IF_BLOCK_RIGHT,
             NT.ELIF_BLOCK,
             NT.ELSE_BLOCK,
             Tag.SEMICOLON
         ),
     }),
-    GrammarRule(NT.IF_BLOCK_HELPER, {
-        (NT.BOOLEAN_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
+    GrammarRule(NT.IF_BLOCK_RIGHT, {
+        (NT.ABSTRACT_COMPLEX_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
+    }),
+    GrammarRule(NT.OPTIONAL_ELSE_BLOCK, {
+        (Tag.ELSE, NT.ELSE_BLOCK_RIGHT),
+        (Special.LAMBDA,)
+    }),
+    GrammarRule(NT.ELSE_BLOCK_RIGHT, {
+        (NT.ELIF_BLOCK,),
+        (NT.ELSE_BLOCK,),
     }),
     GrammarRule(NT.ELIF_BLOCK, {
-        (Tag.ELSE, Tag.IF, NT.IF_BLOCK_HELPER),
+        (Tag.IF, NT.IF_BLOCK_RIGHT),
+        (Special.LAMBDA,)
     }),
     GrammarRule(NT.ELSE_BLOCK, {
-        (Tag.ELSE, NT.COMPLEX_OP_BODY,),
+        (NT.COMPLEX_OP_BODY,),
         (Special.LAMBDA,)
+    }),
+
+    # for loops with to or downto word
+    GrammarRule(NT.FOR_LOOP_BLOCK, {
+        (Tag.FOR, NT.DEFINE_VAR, )
     })
 ]
 

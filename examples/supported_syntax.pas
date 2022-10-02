@@ -1,17 +1,17 @@
-var
-    var1: integer := ((1 + 2) * 3) - 4;
-    var2: real := 0 + (2.7 - 1.2) / 1;
-    var3: char := 'c';
-    var4: string := 'some string1';
-
+var var1: integer := ((1 + 2) * 3) - 4;
+var var2: real := 0 + (2.7 - 1.2) / 1;
+var var3: char := 'c';
+var var4: string := 'some string1';
 var var5: boolean := true;
 
 begin
 
-var1 += 1;
 var1 -= 1;
 var1 *= 1;
+var1 += int_var + 1;
 var2 /= 0.5;
+
+var int_var: integer := 0;
 
 if (var1 > 1) then
     println('var1 > 1');
