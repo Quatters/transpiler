@@ -154,10 +154,11 @@ class SyntaxAnalyzer:
             current_token = token
             if head == token.tag:
                 stack.pop(0)
-                logger.debug(f'parsed token {token}')
+                logger.debug(f'parsed token {token} ({token.tag})')
                 token = tokens.__next__()
             elif isinstance(head, Terminal) or \
                 (rule := self.predict(head, current_token.tag)) is None:
+                logger.debug(f'head: {head}, rule: {rule}')
                 raise SyntaxError(
                     f'{current_token} at line {current_token.line}'
                 )

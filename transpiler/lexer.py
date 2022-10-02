@@ -67,7 +67,7 @@ class Lexer:
                 self.pos + 1,
                 self._get_line()
             )
-            logger.debug(f'parsed token {token}')
+            logger.debug(f'parsed token {token} ({group})')
             self.pos = cursor.end()
             return token
 

@@ -1,6 +1,6 @@
 var
     var1: integer := ((1 + 2) * 3) - 4;
-    var2: real := (2.7 - 1.2) / 1;
+    var2: real := 0 + (2.7 - 1.2) / 1;
     var3: char := 'c';
     var4: string := 'some string1';
 
@@ -13,22 +13,20 @@ var1 -= 1;
 var1 *= 1;
 var2 /= 0.5;
 
-if var1 > 1 then
+if (var1 > 1) then
     println('var1 > 1');
 
-if var2 < 5 then
+if (var2 < 5) or (var5) then
 begin
     var5 := false;
 end;
 
-var i: integer;
-for i := 1 to 3 do
+for var i: integer := 1 to 3 do
 begin
     var1 += 1;
 end;
 
-var j: integer;
-for j := 3 downto 1 do
+for var j: integer := 3 downto 1 do
     var1 -= 1;
 
 while var1 <= 1 do
@@ -36,7 +34,7 @@ while var1 <= 1 do
 
 repeat
     var1 += 1;
-until false;
+until true;
 
 var var_abs := abs(-1);
 var var_sqr := sqr(2);
