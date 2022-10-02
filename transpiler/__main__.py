@@ -73,7 +73,7 @@ class NT(NonTerminal):
 
     NUMBER = 'NUMBER'
     BOOLEAN_OPTIONAL_NOT = 'BOOLEAN_OPTIONAL_NOT'
-    OPTIONAL_COMPARISON = 'OPTIONAL_COMPARISON'
+    OPTIONAL_COMPARISON_OR_CALL = 'OPTIONAL_COMPARISON_OR_CALL'
     COMPARABLE = 'COMPARABLE'
 
     PROG = 'PROG'
@@ -105,8 +105,8 @@ class NT(NonTerminal):
 
 LEXER_RULES = [
     LexerRule(Tag.TYPE_HINT, r'\binteger|real|boolean|char|string\b'),
-    LexerRule(Tag.NUMBER_FLOAT, r'\b[-+]?\d+\.\d+\b'),
-    LexerRule(Tag.NUMBER_INT, r'\b[-+]?[0-9]+\b'),
+    LexerRule(Tag.NUMBER_FLOAT, r'[\-\+]?\d+\.\d+'),
+    LexerRule(Tag.NUMBER_INT, r'[\-\+]?\d+'),
     LexerRule(Tag.COMPARE, r'=|\<\>|\<=|\<|\>=|\>'),
     LexerRule(Tag.OP_ASSIGN, r'\+=|\-=|\*=|/='),
     LexerRule(Tag.MATH_OPERATOR, r'\+|\-|\*|/'),
@@ -211,9 +211,9 @@ GRAMMAR_RULES = [
         (Special.LAMBDA,)
     }),
     GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_VALUE, {
-        (NT.NUMBER, NT.OPTIONAL_COMPARISON),
-        (Tag.ID, NT.OPTIONAL_COMPARISON),
-        (Tag.BOOLEAN_VALUE, NT.OPTIONAL_COMPARISON),
+        (NT.NUMBER, NT.OPTIONAL_COMPARISON_OR_CALL),
+        (Tag.ID, NT.OPTIONAL_COMPARISON_OR_CALL),
+        (Tag.BOOLEAN_VALUE, NT.OPTIONAL_COMPARISON_OR_CALL),
         (NT.BOOLEAN_OPTIONAL_NOT, NT.ABSTRACT_COMPLEX_EXPR_WITH_NOT),
     }),
     GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_OP, {
@@ -231,8 +231,9 @@ GRAMMAR_RULES = [
         (Tag.BOOLEAN_NOT,),
         (Special.LAMBDA,),
     }),
-    GrammarRule(NT.OPTIONAL_COMPARISON, {
+    GrammarRule(NT.OPTIONAL_COMPARISON_OR_CALL, {
         (Tag.COMPARE, NT.COMPARABLE),
+        (NT.CALL,),
         (Special.LAMBDA,)
     }),
     GrammarRule(NT.COMPARABLE, {

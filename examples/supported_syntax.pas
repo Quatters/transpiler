@@ -38,7 +38,7 @@ repeat
 until true;
 
 var1 := abs(-1);
-var var_sqr: integer := sqr(2);
+var var_sqr: integer := sqr(+2);
 var var_sqrt: real := sqrt(4.0);
 var var_exp: real := exp(2);
 
