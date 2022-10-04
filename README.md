@@ -6,21 +6,24 @@ Transpiler from PascalABC.NET to C#.
 
 Requirements: Python 3.10 or above.
 
-Create and activate virtual env (optional):
+Create, activate virtual env and install dependencies:
 
 ```
 python -m venv env
 source env/bin/activate
+pip install -r requirements.txt
 ```
 
-Run `transpiler` module with
+Run `pascal2csharp` module with
 
 ```
-python -m transpiler
+python -m pascal2csharp
 ```
 
-Run tests with
+Before submitting a pull request make sure that your code passes
+all tests and there is no `flake8` linter errors. Check it with
 
 ```
 python -m unittest
+flake8
 ```
