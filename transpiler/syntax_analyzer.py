@@ -1,6 +1,6 @@
 from functools import lru_cache
 import logging
-from typing import Any, Generator, Iterable
+from typing import Any, Generator
 from transpiler.base import (
     NormalizedGrammarRule,
     Symbol,
@@ -72,9 +72,9 @@ class SyntaxAnalyzer:
     def __get_start_symbol(self):
         start_symbol = self.rules[0].left
         if start_symbol is not Special.START and \
-            [rule.left for rule in self.rules
-             if rule.left is Special.START]:
-                start_symbol = Special.START
+                [rule.left for rule in self.rules
+                 if rule.left is Special.START]:
+            start_symbol = Special.START
         return start_symbol
 
     def _build_follow(self):
@@ -157,7 +157,7 @@ class SyntaxAnalyzer:
                 logger.debug(f'parsed token {token} ({token.tag})')
                 token = tokens.__next__()
             elif isinstance(head, Terminal) or \
-                (rule := self.predict(head, current_token.tag)) is None:
+                    (rule := self.predict(head, current_token.tag)) is None:
                 logger.debug(f'head: {head}, rule: {rule}')
                 expected_token = head.value.replace('_', ' ')
 
@@ -166,7 +166,7 @@ class SyntaxAnalyzer:
                     f"Expected '{expected_token}'."
                 )
                 if current_token.tag is Special.LIMITER:
-                    msg = f'unexpected end of string.'
+                    msg = 'unexpected end of string.'
                 raise SyntaxError(msg)
             else:
                 logger.debug(f'using rule {rule}')

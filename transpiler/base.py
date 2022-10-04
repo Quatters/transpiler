@@ -66,6 +66,7 @@ class Token:
     def __repr__(self):
         return str(self.value)
 
+
 class GrammarRule:
     def __init__(self, left: NonTerminal, right: set[tuple]):
         self.left = left
@@ -93,7 +94,7 @@ class NormalizedGrammarRule:
 
 
 def normalize_rules(rule_list: list[GrammarRule]) \
-    -> list[NormalizedGrammarRule]:
+        -> list[NormalizedGrammarRule]:
     normalized_rules = []
     for rule in rule_list:
         for chain in rule.right:

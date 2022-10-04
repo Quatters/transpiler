@@ -1,4 +1,3 @@
-from pprint import pprint
 from unittest import TestCase
 from transpiler.base import (
     Token,
@@ -211,7 +210,7 @@ class LexerTestCase(TestCase):
         lexer.buffer = code
         with self.assertRaises(UnexpectedTokenError) as error:
             list(lexer.tokens)
-        self.assertEqual(str(error.exception), r'% at line 2')
+        self.assertEqual(str(error.exception), r"'%' at line 2.")
 
     def test_types(self):
         code = """
@@ -413,7 +412,6 @@ class SyntaxAnalyzerTestCase(TestCase):
             (MathTerminal.LBRACKET, MathNonTerminal.E, MathTerminal.RBRACKET)
         ),
     ]
-
 
     def test_math_expression_rules(self):
         sa = SyntaxAnalyzer(self.math_expression_rules)
