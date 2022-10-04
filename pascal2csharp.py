@@ -1,8 +1,13 @@
 from pathlib import Path
-from pprint import pprint
 from transpiler.lexer import Lexer
 from transpiler.syntax_analyzer import SyntaxAnalyzer
-from transpiler.base import GrammarRule, LexerRule, Terminal, NonTerminal, Special
+from transpiler.base import (
+    GrammarRule,
+    LexerRule,
+    Terminal,
+    NonTerminal,
+    Special
+)
 
 
 ROOT = Path(__file__).parent.parent.absolute()
