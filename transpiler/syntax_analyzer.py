@@ -12,6 +12,7 @@ from transpiler.base import (
     TranspilerError,
     normalize_rules,
 )
+from transpiler.tree import ParseTree, Node
 
 
 logger = logging.getLogger(__name__)
@@ -146,27 +147,30 @@ class SyntaxAnalyzer:
         return self._predict_table[key1].get(key2)
 
     def parse(self, tokens: Generator[Token, Any, Any]):
-        stack = [self.__get_start_symbol(), Special.LIMITER]
+        tree = ParseTree(root=self.__get_start_symbol())
+        head: Node = tree.root
+        stack: list[Node] = [head, ParseTree.get_node(Special.LIMITER)]
         token = tokens.__next__()
-        head = self.__get_start_symbol()
 
-        while head != Special.LIMITER:
+        while head.tag != Special.LIMITER:
             current_token = token
-            if head == token.tag:
-                stack.pop(0)
-                logger.debug(f'parsed token {token} ({token.tag})')
+            if head.tag == token.tag:
+                head.token = token
+                prev_token = stack.pop(0).token
+                logger.debug(
+                    f'parsed token {token} at line {token.line} ({token.tag})'
+                )
                 token = tokens.__next__()
-            elif isinstance(head, Terminal) or \
-                    (rule := self.predict(head, current_token.tag)) is None:
+            elif isinstance(head.tag, Terminal) or \
+                    (rule := self.predict(head.tag, current_token.tag)) is None:
                 logger.debug(f'head: {head}, rule: {rule}')
-                expected_token = head.value.replace('_', ' ')
-
+                expected_token = head.tag.value.replace('_', ' ')
                 msg = (
                     f"'{current_token}' at line {current_token.line}. "
                     f"Expected '{expected_token}'."
                 )
                 if current_token.tag is Special.LIMITER:
-                    msg = 'unexpected end of string.'
+                    msg = f'unexpected end of string at line {prev_token.line}.'
                 raise SyntaxError(msg)
             else:
                 logger.debug(f'using rule {rule}')
@@ -174,5 +178,6 @@ class SyntaxAnalyzer:
                 for symbol in reversed(rule.right):
                     if symbol is Special.LAMBDA:
                         continue
-                    stack.insert(0, symbol)
+                    node = tree.add(symbol, to=head)
+                    stack.insert(0, node)
             head = stack[0]

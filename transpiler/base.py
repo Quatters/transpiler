@@ -54,7 +54,13 @@ class Token:
     Minimal sensible unit of code sequence.
     """
 
-    def __init__(self, tag: Terminal, value: str, pos: int, line: int):
+    def __init__(
+        self,
+        tag: Symbol,
+        value: str,
+        pos: int | None = None,
+        line: int | None = None,
+    ):
         self.tag = tag
         self.value = value
         self.pos = pos

@@ -526,7 +526,7 @@ class SyntaxAnalyzerTestCase(TestCase):
             yield Token(MathTerminal.NUM, '2', 0, 1)
             yield Token(MathTerminal.MULTIPLY, '*', 0, 1)
             yield Token(MathTerminal.NUM, '3', 0, 1)
-            yield Token(Special.LIMITER, None, -1, 1)
+            yield Token(Special.LIMITER, Special.LIMITER.value)
 
         sa.parse(tokens())
 

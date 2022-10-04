@@ -310,6 +310,7 @@ GRAMMAR_RULES = [
         (NT.ABSTRACT_COMPLEX_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
     }),
     GrammarRule(NT.ELIF_BLOCK, {
+        # FIXME: invalid rule
         (Tag.IF, NT.IF_BLOCK_RIGHT),
         (Special.LAMBDA,)
     }),
