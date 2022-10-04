@@ -10,6 +10,7 @@ Create and activate virtual env (optional):
 
 ```
 python -m venv env
+source env/bin/activate
 ```
 
 Run `transpiler` module with
