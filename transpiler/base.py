@@ -9,78 +9,34 @@ class TranspilerError(Exception):
     pass
 
 
-class Tag(Enum):
-    """
-    Possible token names enumeration.
-    """
-
+class Symbol(Enum):
     def __repr__(self) -> str:
-        return self.value
+        return str(self.value)
 
-    # general
-    ID = 'ID'
-    NUMBER_INT = 'NUMBER_INT'
-    NUMBER_FLOAT = 'NUMBER_FLOAT'
-    LBRACKET = 'LBRACKET'
-    RBRACKET = 'RBRACKET'
-    LBRACKET_SQUARE = 'LBRACKET_SQUARE'
-    RBRACKET_SQUARE = 'RBRACKET_SQUARE'
-    SEMICOLON = 'SEMICOLON'
-    COLON = 'COLON'
-    COMMA = 'COMMA'
-    DOT = 'DOT'
-    QUOTE = 'QUOTE'
-    DQUOTE = 'DQOUTE'
+    def __str__(self) -> str:
+        return str(self.value)
 
-    # types
-    T_INTEGER = 'T_INTEGER'
-    T_REAL = 'T_REAL'
-    T_BOOLEAN = 'T_BOOLEAN'
-    T_CHAR = 'T_CHAR'
-    T_STRING = 'T_STRING'
-    T_ARRAY = 'T_ARRAY'
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return self.value == other.value
 
-    # comparisons
-    EQ = 'EQ'
-    NE = 'NE'
-    LE = 'LE'
-    LT = 'LT'
-    GE = 'GE'
-    GT = 'GT'
+    def __hash__(self) -> int:
+        return hash(self.value)
 
-    # operators
-    PLUS = 'PLUS'
-    MINUS = 'MINUS'
-    MULTIPLY = 'MULTIPLY'
-    DIVIDE = 'DIVIDE'
-    ASSIGN = 'ASSIGN'
-    PLUS_ASSIGN = 'PLUS_ASSIGN'
-    MINUS_ASSIGN = 'MINUS_ASSIGN'
-    MULTIPLY_ASSIGN = 'MULTIPLY_ASSIGN'
-    DIVIDE_ASSIGN = 'DIVIDE_ASSIGN'
-    RANGE = 'RANGE'
 
-    # boolean
-    TRUE = 'TRUE'
-    FALSE = 'FALSE'
+class Special(Symbol):
+    LAMBDA = '__LAMBDA__'
+    START = '__START__'
+    LIMITER = '__LIMITER__'
 
-    # other key words
-    VAR = 'VAR'
-    IF = 'IF'
-    THEN = 'THEN'
-    ELSE = 'ELSE'
-    CASE = 'CASE'
-    OF = 'OF'
-    FOR = 'FOR'
-    WHILE = 'WHILE'
-    REPEAT = 'REPEAT'
-    UNTIL = 'UNTIL'
-    DO = 'DO'
-    TO = 'TO'
-    BEGIN = 'BEGIN'
-    END = 'END'
-    PROCEDURE = 'PROCEDURE'
-    FUNCTION = 'FUNCTION'
+
+class Terminal(Symbol):
+    pass
+
+
+class NonTerminal(Symbol):
+    pass
 
 
 class LexerRule:
@@ -88,6 +44,67 @@ class LexerRule:
     Token definition and regular expression mapping. Used by lexer.
     """
 
-    def __init__(self, def_: Tag, regex: str) -> None:
-        self.def_ = def_
+    def __init__(self, tag: Terminal, regex: str) -> None:
+        self.tag = tag
         self.regex = regex
+
+
+class Token:
+    """
+    Minimal sensible unit of code sequence.
+    """
+
+    def __init__(
+        self,
+        tag: Symbol,
+        value: str,
+        pos: int | None = None,
+        line: int | None = None,
+    ):
+        self.tag = tag
+        self.value = value
+        self.pos = pos
+        self.line = line
+
+    def __str__(self):
+        return str(self.value)
+
+    def __repr__(self):
+        return str(self.value)
+
+
+class GrammarRule:
+    def __init__(self, left: NonTerminal, right: set[tuple]):
+        self.left = left
+        self.right = right
+
+    def __repr__(self) -> str:
+        return f'{repr(self.left)} -> {self.right}'
+
+
+class NormalizedGrammarRule:
+    def __init__(self, left: NonTerminal, right: tuple):
+        self.left = left
+        self.right = right
+
+    def __repr__(self) -> str:
+        return f'{repr(self.left)} -> {self.right}'
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+        return self.left == other.left and self.right == other.right
+
+    def __hash__(self) -> int:
+        return hash((self.left, self.right))
+
+
+def normalize_rules(rule_list: list[GrammarRule]) \
+        -> list[NormalizedGrammarRule]:
+    normalized_rules = []
+    for rule in rule_list:
+        for chain in rule.right:
+            normalized_rules.append(
+                NormalizedGrammarRule(rule.left, chain)
+            )
+    return normalized_rules

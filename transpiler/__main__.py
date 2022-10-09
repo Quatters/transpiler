@@ -1,13 +1,15 @@
+import sys
 from pathlib import Path
 from transpiler.lexer import Lexer
-from transpiler.settings import LEXER_RULES
+from transpiler.syntax_analyzer import SyntaxAnalyzer
+from transpiler.settings import Tag, LEXER_RULES, GRAMMAR_RULES
 
 
-ROOT = Path(__file__).parent.parent.absolute()
+filepath = sys.argv[1]
+code = Path(filepath).read_text()
 
-code = (ROOT / 'examples/valid.pas').read_text()
+lexer = Lexer(Tag, LEXER_RULES, filepath)
+lexer.buffer = code
 
-lexer = Lexer(code, LEXER_RULES)
-
-for token in lexer.tokens:
-    print(token)
+syntax_analyzer = SyntaxAnalyzer(GRAMMAR_RULES, filepath)
+syntax_analyzer.parse(lexer.tokens)
