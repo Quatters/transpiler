@@ -196,7 +196,6 @@ GRAMMAR_RULES = [
 
     GrammarRule(NT.ABSTRACT_EXPR, {
         (NT.ABSTRACT_COMPLEX_EXPR,),
-        (NT.STRING_EXPR,),
     }),
 
     # strings
@@ -226,6 +225,7 @@ GRAMMAR_RULES = [
         (Tag.ID, NT.OPTIONAL_COMPARISON_OR_CALL),
         (Tag.BOOLEAN_VALUE, NT.OPTIONAL_COMPARISON_OR_CALL),
         (NT.BOOLEAN_OPTIONAL_NOT, NT.ABSTRACT_COMPLEX_EXPR_WITH_NOT),
+        (NT.STRING_EXPR,),
     }),
     GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_OP, {
         (Tag.MATH_OPERATOR,),
@@ -251,6 +251,7 @@ GRAMMAR_RULES = [
         (Tag.ID,),
         (Tag.BOOLEAN_VALUE,),
         (NT.NUMBER,),
+        (NT.STRING_EXPR,)
     }),
 
     # prog
@@ -307,7 +308,6 @@ GRAMMAR_RULES = [
         (
             Tag.IF,
             NT.IF_BLOCK_RIGHT,
-            NT.ELIF_BLOCK,
             NT.ELSE_BLOCK,
             Tag.SEMICOLON
         ),
@@ -315,14 +315,13 @@ GRAMMAR_RULES = [
     GrammarRule(NT.IF_BLOCK_RIGHT, {
         (NT.ABSTRACT_COMPLEX_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
     }),
-    GrammarRule(NT.ELIF_BLOCK, {
-        # FIXME: invalid rule
-        (Tag.IF, NT.IF_BLOCK_RIGHT),
-        (Special.LAMBDA,)
-    }),
     GrammarRule(NT.ELSE_BLOCK, {
+        (Tag.ELSE, NT.ELSE_BLOCK_RIGHT, NT.ELSE_BLOCK),
+        (Special.LAMBDA,),
+    }),
+    GrammarRule(NT.ELSE_BLOCK_RIGHT, {
         (NT.COMPLEX_OP_BODY,),
-        (Special.LAMBDA,)
+        (Tag.IF, NT.IF_BLOCK_RIGHT),
     }),
 
     # for loops with to or downto word

@@ -1,5 +1,6 @@
 import logging
 import re
+from sty import fg
 from transpiler.base import (
     WHITESPACE,
     TranspilerError,
@@ -74,7 +75,10 @@ class Lexer:
                 self.pos + 1,
                 self._get_line()
             )
-            logger.debug(f'parsed token {token} at line {token.line} ({group})')
+            logger.debug(
+                f'parsed token {fg.li_green}{token}{fg.rs} at line '
+                f'{token.line} ({group})'
+            )
             self.pos = cursor.end()
             return token
 

@@ -13,7 +13,7 @@ var1 *= 1;
 var1 += int_var + 1;
 var2 /= 0.5;
 
-if (var1 > 1) then
+if var1 > 1 then
     println('var1 > 1');
 
 if (var2 < 5) or (var5) then
@@ -33,10 +33,7 @@ else if (var3 = 'b') then
 begin
     print('b');
 end
-else
-begin
-    print('unknown');
-end;
+else print('unknown');
 
 for var i: integer := 1 to 3 do
 begin

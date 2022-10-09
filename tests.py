@@ -10,6 +10,7 @@ from transpiler.base import (
 )
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import GrammarError, SyntaxAnalyzer
+from transpiler import settings
 
 
 class NonTerm(NonTerminal):
@@ -628,13 +629,128 @@ class SyntaxAnalyzerTestCase(TestCase):
                 {Tag.RBRACKET},
             )
 
-    def test_predict_table_simple_rules(self):
-        sa = SyntaxAnalyzer(self.simple_rules)
-        sa._build_predict_table()
 
-        # print('\n')
-        # pprint(sa._predict_table)
+class WorkingGrammarTestCase(TestCase):
+    # For now there are not any asserts since testing parse tree is
+    # extremely routine task. Nevertheless, if something would break the lexer
+    # or syntax analyzer these tests will fail with their own exceptions.
 
-    def test_predict_table_complex_rules(self):
-        with self.assertRaises(GrammarError):
-            SyntaxAnalyzer(self.complex_rules)
+    def get_lexer(self, code):
+        lexer = Lexer(settings.Tag, settings.LEXER_RULES, 'dummy.pas')
+        lexer.buffer = code
+        return lexer
+
+    def get_syntax_analyzer(self):
+        sa = SyntaxAnalyzer(settings.GRAMMAR_RULES, 'dummy.pas')
+        return sa
+
+    def get_semantic_analyzer(self):
+        raise NotImplementedError
+
+    def get_code_generator(self):
+        raise NotImplementedError
+
+    def test_expressions(self):
+        code = """
+            var a: integer := (1 * 2 - 4) * 5 / 7 - 8;
+            begin
+                var b: boolean := not (1 > 2) and false;
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        sa.parse(lexer.tokens)
+
+    def test_for_loop(self):
+        code = """
+            begin
+                for var i: integer := 1 to 3 do
+                    print(i);
+
+                for var i: integer := 1 to 3 do
+                begin
+                    print(i);
+                end;
+
+                for var i: integer := 3 downto 1 do
+                    print(i);
+
+                for var i: integer := 3 downto 1 do
+                begin
+                    print(i);
+                    println(i);
+                    somefunc(i);
+                end;
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        sa.parse(lexer.tokens)
+
+    def test_while_loop(self):
+        code = """
+            begin
+                while 1 <= 2 do
+                    print('hello world');
+
+                while (1 < 2) or (1 = 2) do
+                begin
+                    print('hello world');
+                end;
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        sa.parse(lexer.tokens)
+
+    def test_repeat_loop(self):
+        code = """
+            begin
+                var a: integer := 1;
+                repeat
+                    somefunc();
+                    a += 1;
+                until a < 3;
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        sa.parse(lexer.tokens)
+
+    def test_if(self):
+        code = """
+            begin
+                var a: integer := 1;
+
+                if a = 1 then a := 1;
+                if (a = 1) and (a = 2) then a := 2;
+
+                if a = 1 then
+                begin
+                    a := 1;
+                end;
+                if (a = 1) and (a = 2) then
+                begin
+                    a := 2;
+                end;
+
+                if a = 1 then a := 1
+                else a := 1;
+
+                if (a = 1) or (a = 10) then a := 1
+                else if (a - 1 = 0) then a := 1;
+
+                if (a = 1) or (a = 10) then a := 1
+                else if (a - 1 = 0) then a := 1
+                else a := 1;
+
+                if (a = 1) or (a = 10) then a := 1
+                else if (a - 1 = 0) then a := 1
+                else if (a - 1 = 0) then a := 1
+                else if (a - 1 = 0) then a := 1
+                else a := 1;
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        sa.parse(lexer.tokens)

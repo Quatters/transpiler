@@ -1,3 +1,4 @@
+from sty import fg
 from functools import lru_cache
 import logging
 from typing import Any, Generator
@@ -153,7 +154,7 @@ class SyntaxAnalyzer:
             return None
         return self._predict_table[key1].get(key2)
 
-    def parse(self, tokens: Generator[Token, Any, Any]):
+    def parse(self, tokens: Generator[Token, Any, Any]) -> ParseTree:
         tree = ParseTree(root=self.__get_start_symbol())
         head: Node = tree.root
         stack: list[Node] = [head, ParseTree.get_node(Special.LIMITER)]
@@ -165,12 +166,14 @@ class SyntaxAnalyzer:
                 head.token = token
                 prev_token = stack.pop(0).token
                 logger.debug(
-                    f'parsed token {token} at line {token.line} ({token.tag})'
+                    f'parsed token {fg.li_yellow}{token}{fg.rs} at line '
+                    f'{token.line} ({token.tag}), '
+                    f'waiting {stack[0]}'
                 )
                 token = tokens.__next__()
             elif isinstance(head.tag, Terminal) or \
                     (rule := self.predict(head.tag, current_token.tag)) is None:
-                logger.debug(f'head: {head}, rule: {rule}')
+                logger.debug(f'head: {head}, stack: {stack}')
                 expected_token = head.tag.value.replace('_', ' ')
                 line = current_token.line
                 msg = (
@@ -192,3 +195,5 @@ class SyntaxAnalyzer:
                     node = tree.add(symbol, to=head)
                     stack.insert(0, node)
             head = stack[0]
+
+        return tree
