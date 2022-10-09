@@ -27,11 +27,18 @@ class SyntaxError(TranspilerError):
 
 
 class SyntaxAnalyzer:
-    def __init__(self, rules: list[GrammarRule] | tuple[GrammarRule]):
+    def __init__(
+        self,
+        rules: list[GrammarRule] | tuple[GrammarRule],
+        filepath: str | None = None
+    ):
         self.rules = rules
         self._first: dict[NonTerminal, set[Terminal | Special]] = {}
         self._follow: dict[NonTerminal, set[Terminal | Special]] = {}
         self._predict_table: dict[NonTerminal, dict[Terminal, GrammarRule]] = {}
+
+        self.filepath = filepath
+
         self._build_first()
         self._build_follow()
         self._build_predict_table()
@@ -165,12 +172,16 @@ class SyntaxAnalyzer:
                     (rule := self.predict(head.tag, current_token.tag)) is None:
                 logger.debug(f'head: {head}, rule: {rule}')
                 expected_token = head.tag.value.replace('_', ' ')
+                line = current_token.line
                 msg = (
-                    f"'{current_token}' at line {current_token.line}. "
-                    f"Expected '{expected_token}'."
+                    f"'{current_token}' at line {line}. "
+                    f"Expected '{expected_token}'"
                 )
                 if current_token.tag is Special.LIMITER:
-                    msg = f'unexpected end of string at line {prev_token.line}.'
+                    line = prev_token.line
+                    msg = f'unexpected end of string at line {line}'
+                if self.filepath is not None:
+                    msg += f' ({self.filepath}:{line})'
                 raise SyntaxError(msg)
             else:
                 logger.debug(f'using rule {rule}')

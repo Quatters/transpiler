@@ -26,7 +26,12 @@ class Lexer:
     Token parser from code sequence.
     """
 
-    def __init__(self, terminal_cls: type[Terminal], rules: list):
+    def __init__(
+        self,
+        terminal_cls: type[Terminal],
+        rules: list,
+        filepath: str | None = None,
+    ):
         self.terminal_cls = terminal_cls
         parts = [f'(?P<{rule.tag.value}>{rule.regex})' for rule in rules]
         self.regex = re.compile('|'.join(parts), flags=LEXER_REGEX_FLAGS)
@@ -36,6 +41,8 @@ class Lexer:
 
         self.buffer: str | None = None
         self.buffer_length: int = -1
+
+        self.filepath = filepath
 
     @property
     def tokens(self):
@@ -71,9 +78,11 @@ class Lexer:
             self.pos = cursor.end()
             return token
 
-        raise UnexpectedTokenError(
-            f"'{self.buffer[self.pos]}' at line {self._get_line()}."
-        )
+        line = self._get_line()
+        msg = f"'{self.buffer[self.pos]}' at line {line}"
+        if self.filepath is not None:
+            msg += f" ({self.filepath}:{line})"
+        raise UnexpectedTokenError(msg)
 
     def _get_line(self):
         return self.buffer.count('\n', 0, self.pos) + 1

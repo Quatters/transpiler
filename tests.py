@@ -210,7 +210,7 @@ class LexerTestCase(TestCase):
         lexer.buffer = code
         with self.assertRaises(UnexpectedTokenError) as error:
             list(lexer.tokens)
-        self.assertEqual(str(error.exception), r"'%' at line 2.")
+        self.assertEqual(str(error.exception), r"'%' at line 2")
 
     def test_types(self):
         code = """

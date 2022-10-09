@@ -6,12 +6,12 @@ var var5: boolean := true;
 
 begin
 
+var int_var: integer := 0;
+
 var1 -= 1;
 var1 *= 1;
 var1 += int_var + 1;
 var2 /= 0.5;
-
-var int_var: integer := 0;
 
 if (var1 > 1) then
     println('var1 > 1');
@@ -19,6 +19,23 @@ if (var1 > 1) then
 if (var2 < 5) or (var5) then
 begin
     var5 := false;
+end;
+
+if (false) then
+    print('false')
+else print('else');
+
+if (var3 = 'a') then
+begin
+    print('a');
+end
+else if (var3 = 'b') then
+begin
+    print('b');
+end
+else
+begin
+    print('unknown');
 end;
 
 for var i: integer := 1 to 3 do
