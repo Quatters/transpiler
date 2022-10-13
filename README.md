@@ -9,10 +9,10 @@ Transpiler from PascalABC.NET to C#.
 
 ```pascal
 // ok
-var a: char = 'a';
+var a: char := 'a';
 
 // not supported
-var a = 'a';
+var a := 'a';
 ```
 
 ## Contribute
@@ -21,7 +21,7 @@ Requirements: Python 3.10 or above.
 
 Create, activate virtual env and install dependencies:
 
-```
+```bash
 python -m venv env
 source env/bin/activate
 pip install -r requirements.txt
