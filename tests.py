@@ -10,6 +10,7 @@ from transpiler.base import (
 )
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import GrammarError, SyntaxAnalyzer
+from transpiler.semantic_analyzer import SemanticAnalyzer
 from transpiler import settings
 
 
@@ -644,8 +645,8 @@ class WorkingGrammarTestCase(TestCase):
         sa = SyntaxAnalyzer(settings.GRAMMAR_RULES, 'dummy.pas')
         return sa
 
-    def get_semantic_analyzer(self):
-        raise NotImplementedError
+    def get_semantic_analyzer(self, tree):
+        return SemanticAnalyzer(tree, "dummy.pas")
 
     def get_code_generator(self):
         raise NotImplementedError
@@ -754,3 +755,26 @@ class WorkingGrammarTestCase(TestCase):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
+
+    def test_types(self):
+        code = """
+            begin
+                var a: integer := 10 + (1 + 1) * 2 - 3.0 + 100;
+                var b: integer := 10;
+                a := 3;
+            end.
+        """
+
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+
+        sem_an = self.get_semantic_analyzer(tree)
+        sem_an.parse(tree.root)
+
+        print(sem_an.vars_dict)
+
+        # добавить класс SemanticError
+        # with self.assertRaises(TranspilerError):
+            # instantiate semantic analyzer
+            # call parse
