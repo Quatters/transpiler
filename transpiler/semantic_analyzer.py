@@ -19,7 +19,7 @@ class SemanticAnalyzer:
             self.dfs(root)
         except AssertionError as error:
             node = error.args[0]["node"]
-            msg = f"'{node.token.value}' at line {node.token.line}"
+            msg = f"{node.token.value} at line {node.token.line}"
             additional_msg = error.args[0]["message"]
             msg += f' - {additional_msg}'
             if self.filepath is not None:
@@ -113,18 +113,18 @@ class SemanticAnalyzer:
 """
         Если в выражении есть деление, то оно будет real
         Повторное обьявление переменной
-      
+
       По умолчанию интовые переменные имеют значение 0
         Можно в real присвоить int константу, но нельзя присвоть int переменную
-      
+
       d - оказывается в values для себя самого
       var d: integer := 10;
       d := 15;
-      
+
                 этот код рабочий
                 var a: integer;
                 var b: integer := a + (20 - 2) * 6;
-                
+
                 undefined vars
 
 Мы записываем в values имена переменных, а не их значения
@@ -135,7 +135,7 @@ class SemanticAnalyzer:
     bool false
     char ничего
     string ничего
-    
+
 
 True or False - строка или бул вар
 
