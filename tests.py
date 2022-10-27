@@ -1,3 +1,4 @@
+import logging
 from unittest import TestCase
 from transpiler.base import (
     Token,
@@ -10,9 +11,11 @@ from transpiler.base import (
 )
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import GrammarError, SyntaxAnalyzer
-from transpiler.semantic_analyzer import SemanticAnalyzer
+from transpiler.semantic_analyzer import SemanticAnalyzer, SemanticError, TranspilerError
 from transpiler import settings
 
+
+logger = logging.getLogger(__name__)
 
 class NonTerm(NonTerminal):
     DESCR = 'DESCR'
@@ -760,8 +763,26 @@ class WorkingGrammarTestCase(TestCase):
         code = """
             begin
                 var a: integer := 10;
-                var b: real := 20.20;
-                var c: integer := a + 30;
+                var b: integer := a;
+                var c: integer := a + 10;
+                
+                var r: real := 10.10;
+                var r1: real := r;
+                var r2: real := r + 10.20;
+                
+                r1 := 10;
+                r := a;
+                
+                var expr: integer := a + 100 * ((8 - 200) + (2 * 3)) - b;
+                var expr2: real := a + 100 * ((8 - r) + (2 * 3)) - b;
+                
+                var t: boolean := true;
+                var f: boolean := false;
+                t := f;
+                t := not (true and f or false);
+                
+                var s: string := 's t r real + false';
+                
             end.
         """
 
@@ -772,9 +793,97 @@ class WorkingGrammarTestCase(TestCase):
         sem_an = self.get_semantic_analyzer(tree)
         sem_an.parse(tree.root)
 
-        print(sem_an.vars_dict)
+    def test_int_convert_to_real(self):
 
-        # добавить класс SemanticError
-        # with self.assertRaises(SemanticError):
-            # instantiate semantic analyzer
-            # call parse
+        self.check_fails("""
+            begin
+                var c: real := 10.0;
+                var a: real := 10;
+                var b: integer := c;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                a := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 10;
+                var a: integer := 15;           
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer;
+                var a: integer := 15;           
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 15;
+                var a: integer;           
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := true;
+                a := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 10 and 1;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := true;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var b: boolean := false;
+                var a: boolean := b and 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var b: string := 10;
+            end.
+        """)
+
+    def check_fails(self, code):
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+
+        sem_an = self.get_semantic_analyzer(tree)
+        with self.assertRaises(SemanticError) as error:
+            sem_an.parse(tree.root)
+
+        logger.info(f"Raised {error.exception}")
+        # self.assertEqual(str(error.exception), r"'%' at line 2")
+
+    def test_string(self):
+        self.check_fails("""
+            begin
+                var b: string := 10;
+            end.
+        """)
+

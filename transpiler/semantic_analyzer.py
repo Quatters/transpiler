@@ -6,6 +6,7 @@ from transpiler.base import TranspilerError
 class SemanticError(TranspilerError):
     pass
 
+
 class SemanticAnalyzer:
 
     def __init__(self, tree: SyntaxTree, filepath: str | None = None):
@@ -17,8 +18,10 @@ class SemanticAnalyzer:
         try:
             self.dfs(root)
         except AssertionError as error:
-            node = error.args[0]
+            node = error.args[0]["node"]
             msg = f"'{node.token.value}' at line {node.token.line}"
+            additional_msg = error.args[0]["message"]
+            msg += f' - {additional_msg}'
             if self.filepath is not None:
                 msg += f" ({self.filepath}:{node.token.line})"
             raise SemanticError(msg)
@@ -27,20 +30,17 @@ class SemanticAnalyzer:
         children = children or []
         setattr(node, "visited", True)
 
-        if not node.children and isinstance(node.tag, Tag):
-            print("Layer", counter, node, "Leave")
-        elif isinstance(node.tag, Tag):
-            print("Layer", counter, node)
+        if node.token.tag == Tag.QUOTE:
+            pass
 
         if isinstance(node.tag, Tag) and node.tag == Tag.ID:
             if self.is_left(node, children):
-                print(children)
+                self.assert_var_is_not_defined(node)
                 self.vars_dict[node.token.value] = {
                     "type": children[3]
                 }
 
-
-        if isinstance(node.tag, Tag) and node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT] or (node.tag == Tag.ID and not self.is_left(node, children)):
+        if isinstance(node.tag, Tag) and node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT, Tag.BOOLEAN_VALUE, Tag.QUOTE] or (node.tag == Tag.ID and not self.is_left(node, children)):
             deep_parent = self.get_deep_parent(node)
 
             if deep_parent.tag == NT.DEFINE_VAR:
@@ -77,23 +77,31 @@ class SemanticAnalyzer:
         if node_value.tag == Tag.ID:
             self.assert_var_is_defined(node_value)
             type_node_value = self.vars_dict[node_value.token.value]["type"]
-            assert node_type.token.value == type_node_value.token.value, node_value
+            types_are_equal = node_type.token.value == type_node_value.token.value
+            types_left_is_real_right_is_int = node_type.token.value.lower() == "real" and \
+                                              type_node_value.token.value.lower() == "integer"
+            assert types_are_equal or types_left_is_real_right_is_int, \
+                    {"node": node_value, "message": f"type {type_node_value.token.value} of {node_value.token.value} is not assignable to {node_type.token.value}"}
         elif node_type.token.value.lower() == "integer":
-            assert node_value.token.value.isdigit(), node_value
+            assert node_value.token.value.isdigit(), {"node": node_value, "message": f"{node_value.token.value} is not integer"}
         elif node_type.token.value.lower() == "real":
             try:
                 float(node_value.token.value)
             except ValueError:
-                raise AssertionError(node_value)
+                raise AssertionError({"node": node_value, "message": f"{node_value.token.value} is not real"})
         elif node_type.token.value.lower() == "boolean":
             bool_var = node_value.token.value.lower()
-            assert bool_var in ["true", "false"], node_value
+            assert bool_var in ["true", "false"], {"node": node_value, "message": f"{node_value.token.value} is not boolean"}
+        elif node_type.token.value.lower() == "string":
+            assert node_value.tag == Tag.QUOTE, {"node": node_value, "message": f"{node_value.token.value} is not string"}
         else:
             pass # Доделать типы
 
-
     def assert_var_is_defined(self, node_id):
-        assert node_id.token.value in self.vars_dict, node_id
+        assert node_id.token.value in self.vars_dict, {"node": node_id, "message": "variable is not defined"}
+
+    def assert_var_is_not_defined(self, node_id):
+        assert node_id.token.value not in self.vars_dict, {"node": node_id, "message": "variable is already defined"}
 
     def is_left(self, node_cur: Node, children: list[Node]) -> bool:
         if [child for child in children if child.tag == NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT]:
@@ -102,13 +110,32 @@ class SemanticAnalyzer:
         return False
 
 
-
-
 """
+        Если в выражении есть деление, то оно будет real
+        Повторное обьявление переменной
+      
+      По умолчанию интовые переменные имеют значение 0
+        Можно в real присвоить int константу, но нельзя присвоть int переменную
+      
+      d - оказывается в values для себя самого
+      var d: integer := 10;
+      d := 15;
+      
+                этот код рабочий
                 var a: integer;
                 var b: integer := a + (20 - 2) * 6;
                 
                 undefined vars
+
+Мы записываем в values имена переменных, а не их значения
+
+Значения по умолчанию:
+    int 0
+    real 0
+    bool false
+    char ничего
+    string ничего
+    
 
 True or False - строка или бул вар
 
