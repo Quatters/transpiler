@@ -38,22 +38,21 @@ class SemanticAnalyzer:
                 self.vars_dict[node.token.value] = {
                     "type": children[3]
                 }
-            else:
-                self.assert_var_is_defined(node)
 
-        if isinstance(node.tag, Tag) and node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT]:
-            # print(children)
+
+        if isinstance(node.tag, Tag) and node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT] or (node.tag == Tag.ID and not self.is_left(node, children)):
             deep_parent = self.get_deep_parent(node)
+
             if deep_parent.tag == NT.DEFINE_VAR:
                 id_node: Node = [child for child in deep_parent.children if child.tag == Tag.ID][0]
                 id_type: Node = [child for child in deep_parent.children if child.tag == Tag.TYPE_HINT][0]
-                self.assert_type_of_new_var(id_node, id_type, node)
+                self.assert_var_type(id_type, node)
             elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
                 id_node = deep_parent.children[0]
                 self.assert_var_is_defined(id_node)
 
                 id_type = self.vars_dict[id_node.token.value]["type"]
-                self.assert_type_of_new_var(id_node, id_type, node)
+                self.assert_var_type(id_type, node)
 
             if "values" in self.vars_dict[id_node.token.value]:
                 self.vars_dict[id_node.token.value]["values"].append(node.token.value)
@@ -74,12 +73,14 @@ class SemanticAnalyzer:
 
         return current
 
-    def assert_type_of_new_var(self, node_id: Node, node_type: Node, node_value: Node):
+    def assert_var_type(self, node_type: Node, node_value: Node):
         if node_value.tag == Tag.ID:
             self.assert_var_is_defined(node_value)
+            type_node_value = self.vars_dict[node_value.token.value]["type"]
+            assert node_type.token.value == type_node_value.token.value, node_value
         elif node_type.token.value.lower() == "integer":
             assert node_value.token.value.isdigit(), node_value
-        elif node_type.token.value.lower() == "float":
+        elif node_type.token.value.lower() == "real":
             try:
                 float(node_value.token.value)
             except ValueError:
@@ -88,7 +89,6 @@ class SemanticAnalyzer:
             bool_var = node_value.token.value.lower()
             assert bool_var in ["true", "false"], node_value
         else:
-
             pass # Доделать типы
 
 
@@ -105,6 +105,11 @@ class SemanticAnalyzer:
 
 
 """
+                var a: integer;
+                var b: integer := a + (20 - 2) * 6;
+                
+                undefined vars
+
 True or False - строка или бул вар
 
 преобразование CST в AST

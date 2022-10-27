@@ -759,9 +759,9 @@ class WorkingGrammarTestCase(TestCase):
     def test_types(self):
         code = """
             begin
-                var a: integer := 10 + (1 + 1) * 2 - 3.0 + 100;
-                var b: integer := 10;
-                a := 3;
+                var a: integer := 10;
+                var b: real := 20.20;
+                var c: integer := a + 30;
             end.
         """
 
@@ -775,6 +775,6 @@ class WorkingGrammarTestCase(TestCase):
         print(sem_an.vars_dict)
 
         # добавить класс SemanticError
-        # with self.assertRaises(TranspilerError):
+        # with self.assertRaises(SemanticError):
             # instantiate semantic analyzer
             # call parse
