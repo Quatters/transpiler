@@ -13,6 +13,7 @@ class SemanticAnalyzer:
         self.tree = tree
         self.filepath = filepath
         self.vars_dict = {}
+        self._we_are_in_string = False
 
     def parse(self, root: Node):
         try:
@@ -30,34 +31,48 @@ class SemanticAnalyzer:
         children = children or []
         setattr(node, "visited", True)
 
-        if node.token.tag == Tag.QUOTE:
-            pass
+        if self._we_are_in_string and node.tag == Tag.QUOTE:
+            self._we_are_in_string = False
+        elif not self._we_are_in_string:
+            if node.token.tag == Tag.MATH_OPERATOR:
+                pass
 
-        if isinstance(node.tag, Tag) and node.tag == Tag.ID:
-            if self.is_left(node, children):
-                self.assert_var_is_not_defined(node)
-                self.vars_dict[node.token.value] = {
-                    "type": children[3]
-                }
+            if node.tag == Tag.ID:
+                if self.is_left(node, children):
+                    self.assert_var_is_not_defined(node)
+                    self.vars_dict[node.token.value] = {
+                        "type": children[3]
+                    }
 
-        if isinstance(node.tag, Tag) and node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT, Tag.BOOLEAN_VALUE, Tag.QUOTE] or (node.tag == Tag.ID and not self.is_left(node, children)):
-            deep_parent = self.get_deep_parent(node)
+            right_tags = [Tag.NUMBER_INT,
+                          Tag.NUMBER_FLOAT,
+                          Tag.BOOLEAN_VALUE,
+                          Tag.QUOTE,
+                          Tag.MATH_OPERATOR,
+                          Tag.BOOLEAN_OPERATOR,
+                          Tag.BOOLEAN_NOT]
 
-            if deep_parent.tag == NT.DEFINE_VAR:
-                id_node: Node = [child for child in deep_parent.children if child.tag == Tag.ID][0]
-                id_type: Node = [child for child in deep_parent.children if child.tag == Tag.TYPE_HINT][0]
-                self.assert_var_type(id_type, node)
-            elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
-                id_node = deep_parent.children[0]
-                self.assert_var_is_defined(id_node)
+            if node.tag in right_tags or (node.tag == Tag.ID and not self.is_left(node, children)):
+                if node.tag == Tag.QUOTE:
+                    self._we_are_in_string = True
 
-                id_type = self.vars_dict[id_node.token.value]["type"]
-                self.assert_var_type(id_type, node)
+                deep_parent = self.get_deep_parent(node)
 
-            if "values" in self.vars_dict[id_node.token.value]:
-                self.vars_dict[id_node.token.value]["values"].append(node.token.value)
-            else:
-                self.vars_dict[id_node.token.value]["values"] = [node.token.value]
+                if deep_parent.tag == NT.DEFINE_VAR:
+                    id_node: Node = [child for child in deep_parent.children if child.tag == Tag.ID][0]
+                    id_type: Node = [child for child in deep_parent.children if child.tag == Tag.TYPE_HINT][0]
+                    self.assert_var_type(id_type, node)
+                elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
+                    id_node = deep_parent.children[0]
+                    self.assert_var_is_defined(id_node)
+
+                    id_type = self.vars_dict[id_node.token.value]["type"]
+                    self.assert_var_type(id_type, node)
+
+                if "values" in self.vars_dict[id_node.token.value]:
+                    self.vars_dict[id_node.token.value]["values"].append(node.token.value)
+                else:
+                    self.vars_dict[id_node.token.value]["values"] = [node.token.value]
 
         for child in node.children:
             if not hasattr(child, "visited"):
@@ -82,20 +97,31 @@ class SemanticAnalyzer:
                                               type_node_value.token.value.lower() == "integer"
             assert types_are_equal or types_left_is_real_right_is_int, \
                     {"node": node_value, "message": f"type {type_node_value.token.value} of {node_value.token.value} is not assignable to {node_type.token.value}"}
-        elif node_type.token.value.lower() == "integer":
-            assert node_value.token.value.isdigit(), {"node": node_value, "message": f"{node_value.token.value} is not integer"}
-        elif node_type.token.value.lower() == "real":
-            try:
-                float(node_value.token.value)
-            except ValueError:
-                raise AssertionError({"node": node_value, "message": f"{node_value.token.value} is not real"})
-        elif node_type.token.value.lower() == "boolean":
-            bool_var = node_value.token.value.lower()
-            assert bool_var in ["true", "false"], {"node": node_value, "message": f"{node_value.token.value} is not boolean"}
-        elif node_type.token.value.lower() == "string":
-            assert node_value.tag == Tag.QUOTE, {"node": node_value, "message": f"{node_value.token.value} is not string"}
-        else:
-            pass # Доделать типы
+        elif node_value.tag == Tag.NUMBER_INT:
+            assert node_type.token.value.lower() in ["integer", "real"], {"node": node_value, "message": f"{node_value.token.value} is not assignable to type {node_type.token.value}"}
+        elif node_value.tag == Tag.NUMBER_FLOAT:
+            assert node_type.token.value.lower() == "real", {"node": node_value, "message": f"{node_value.token.value} is not assignable to type {node_type.token.value}"}
+        elif node_value.tag == Tag.BOOLEAN_VALUE:
+            assert node_type.token.value.lower() == "boolean", {"node": node_value, "message": f"{node_value.token.value} is not assignable to type {node_type.token.value}"}
+        elif node_value.tag == Tag.QUOTE:
+            if node_type.token.value.lower() == "char" and self._we_are_in_string:
+                siblings = node_value.parent.children
+                only_one_child = not siblings[1].children[1].children
+                is_single_char = len(siblings[1].children[0].token.value) == 1
+                assert only_one_child and is_single_char, {"node": node_value, "message": f"type string is not assignable to type char"}
+            else:
+                assert node_type.token.value.lower() == "string", {"node": node_value, "message": f"type string is not assignable to type {node_type.token.value}"}
+        elif node_value.tag == Tag.MATH_OPERATOR:
+            left_type_value = node_type.token.value.lower()
+            if node_value.token.value == '+':
+                assert left_type_value in ["integer", "real", "string"], {"node": node_value,
+                                                                "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
+            else:
+                assert left_type_value in ["integer", "real"], {"node": node_value, "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
+        elif node_value.tag in [Tag.BOOLEAN_OPERATOR, Tag.BOOLEAN_NOT]:
+            left_type_value = node_type.token.value.lower()
+            assert left_type_value == "boolean", {"node": node_value,
+                                                            "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
 
     def assert_var_is_defined(self, node_id):
         assert node_id.token.value in self.vars_dict, {"node": node_id, "message": "variable is not defined"}
@@ -111,11 +137,13 @@ class SemanticAnalyzer:
 
 
 """
+    ТЕСТИКИ
+
+        Проверка на то чтобы внутри кавычек ничего не обрабатывалось
+
         Если в выражении есть деление, то оно будет real
-        Повторное обьявление переменной
       
       По умолчанию интовые переменные имеют значение 0
-        Можно в real присвоить int константу, но нельзя присвоть int переменную
       
       d - оказывается в values для себя самого
       var d: integer := 10;
@@ -127,7 +155,6 @@ class SemanticAnalyzer:
                 
                 undefined vars
 
-Мы записываем в values имена переменных, а не их значения
 
 Значения по умолчанию:
     int 0

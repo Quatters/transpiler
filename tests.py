@@ -781,10 +781,12 @@ class WorkingGrammarTestCase(TestCase):
                 t := f;
                 t := not (true and f or false);
                 
-                var s: string := 's t r real + false';
+                var s: string := 's t r real + false' + 'adsf'; 
                 
+                var ch: char := 'a';              
             end.
         """
+
 
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
@@ -868,6 +870,25 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+        self.check_fails("""
+            begin
+                var a: boolean := true + false;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var t3: boolean := true and false or t1 + true;                  
+            end.
+        """)
+
+
+        self.check_fails("""
+            begin
+                var t: integer := 10 and 8 or 16;                  
+            end.
+        """)
+
     def check_fails(self, code):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
@@ -877,6 +898,7 @@ class WorkingGrammarTestCase(TestCase):
         with self.assertRaises(SemanticError) as error:
             sem_an.parse(tree.root)
 
+        logger.info(sem_an.vars_dict)
         logger.info(f"Raised {error.exception}")
         # self.assertEqual(str(error.exception), r"'%' at line 2")
 
@@ -886,4 +908,17 @@ class WorkingGrammarTestCase(TestCase):
                 var b: string := 10;
             end.
         """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' + 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: char := 'asd';
+            end.
+        """)
+
 
