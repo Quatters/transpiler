@@ -14,10 +14,11 @@ class SemanticAnalyzer:
         self.filepath = filepath
         self.vars_dict = {}
         self._we_are_in_string = False
+        self._visited_nodes = {}
 
     def parse(self, root: Node):
         try:
-            self.dfs(root)
+            self.dfs(root, callback=self._check)
         except AssertionError as error:
             node = error.args[0]["node"]
             msg = f"{node.token.value} at line {node.token.line}"
@@ -27,10 +28,24 @@ class SemanticAnalyzer:
                 msg += f" ({self.filepath}:{node.token.line})"
             raise SemanticError(msg)
 
-    def dfs(self, node: Node, counter: int = 0, children: list[Node] = None ):
+    def dfs(self, node: Node, children: list[Node] = None, callback=None):
         children = children or []
-        setattr(node, "visited", True)
+        # setattr(node, "visited", True)
+        callback_name = callback.__name__ if callback is not None else 'default'
+        visited = self._visited_nodes.get(callback_name)
+        if visited is None:
+            self._visited_nodes[callback_name] = {node.__hash__()}
+        else:
+            self._visited_nodes[callback_name].add(node.__hash__())
 
+        if callback is not None:
+            callback(node, children)
+
+        for child in node.children:
+            if child not in self._visited_nodes[callback_name]:
+                self.dfs(child, node.children, callback)
+
+    def _check(self, node: Node, children: list[Node] = None):
         if self._we_are_in_string and node.tag == Tag.QUOTE:
             self._we_are_in_string = False
         elif not self._we_are_in_string:
@@ -50,33 +65,32 @@ class SemanticAnalyzer:
                           Tag.QUOTE,
                           Tag.MATH_OPERATOR,
                           Tag.BOOLEAN_OPERATOR,
-                          Tag.BOOLEAN_NOT]
+                          Tag.BOOLEAN_NOT,
+                          Tag.COMPARE]
 
             if node.tag in right_tags or (node.tag == Tag.ID and not self.is_left(node, children)):
                 if node.tag == Tag.QUOTE:
                     self._we_are_in_string = True
 
                 deep_parent = self.get_deep_parent(node)
+                self.assert_type_of_right_expression(deep_parent)
 
-                if deep_parent.tag == NT.DEFINE_VAR:
-                    id_node: Node = [child for child in deep_parent.children if child.tag == Tag.ID][0]
-                    id_type: Node = [child for child in deep_parent.children if child.tag == Tag.TYPE_HINT][0]
-                    self.assert_var_type(id_type, node)
-                elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
-                    id_node = deep_parent.children[0]
-                    self.assert_var_is_defined(id_node)
+                # if deep_parent.tag == NT.DEFINE_VAR:
+                #     id_node: Node = [child for child in deep_parent.children if child.tag == Tag.ID][0]
+                #     id_type: Node = [child for child in deep_parent.children if child.tag == Tag.TYPE_HINT][0]
+                #     self.assert_var_type(id_type, node)
+                # elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
+                #     id_node = deep_parent.children[0]
+                #     self.assert_var_is_defined(id_node)
+                #
+                #     id_type = self.vars_dict[id_node.token.value]["type"]
+                #     self.assert_var_type(id_type, node)
+                #
+                # if "values" in self.vars_dict[id_node.token.value]:
+                #     self.vars_dict[id_node.token.value]["values"].append(node.token.value)
+                # else:
+                #     self.vars_dict[id_node.token.value]["values"] = [node.token.value]
 
-                    id_type = self.vars_dict[id_node.token.value]["type"]
-                    self.assert_var_type(id_type, node)
-
-                if "values" in self.vars_dict[id_node.token.value]:
-                    self.vars_dict[id_node.token.value]["values"].append(node.token.value)
-                else:
-                    self.vars_dict[id_node.token.value]["values"] = [node.token.value]
-
-        for child in node.children:
-            if not hasattr(child, "visited"):
-                self.dfs(child, counter + 1, node.children)
 
     def get_child_id(self):
         pass
@@ -87,6 +101,26 @@ class SemanticAnalyzer:
             current = current.parent
 
         return current
+
+    def assert_type_of_right_expression(self, node: Node):
+        if node.tag == NT.DEFINE_VAR:
+            self._assert_type_of_define_var(node)
+        elif node.tag == NT.ABSTRACT_STATEMENT:
+            self._assert_type_of_abstract_statement(node)
+
+    def _assert_type_of_define_var(self, node: Node):
+        optional_define_var_assignment_node = node.children[4]
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(optional_define_var_assignment_node, callback=self._collect_right_terminals, children=node.children)
+        print('lol')
+
+    def _assert_type_of_abstract_statement(self, node: Node):
+        pass
+
+    def _collect_right_terminals(self, node: Node, children: list[Node] = None):
+        if isinstance(node.tag, Tag):
+            self.right_terminals.append(node)
 
     def assert_var_type(self, node_type: Node, node_value: Node):
         if node_value.tag == Tag.ID:
@@ -122,6 +156,8 @@ class SemanticAnalyzer:
             left_type_value = node_type.token.value.lower()
             assert left_type_value == "boolean", {"node": node_value,
                                                             "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
+        elif node_value.tag == Tag.COMPARE:
+            pass
 
     def assert_var_is_defined(self, node_id):
         assert node_id.token.value in self.vars_dict, {"node": node_id, "message": "variable is not defined"}

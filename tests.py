@@ -793,6 +793,8 @@ class WorkingGrammarTestCase(TestCase):
                 s := '- / + * false true';
                 s1 := s;
                 
+                var k: boolean := 1 + 2 = 3;
+                
             end.
         """
 
@@ -940,3 +942,17 @@ class WorkingGrammarTestCase(TestCase):
                 var s: string := false;
             end.
         """)
+
+    def test_compare(self):
+        code = """
+            begin
+                var k: boolean := 1 + 2 = 3;
+            end.
+        """
+
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+
+        sem_an = self.get_semantic_analyzer(tree)
+        sem_an.parse(tree.root)
