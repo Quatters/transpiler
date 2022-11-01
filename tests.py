@@ -215,7 +215,7 @@ class LexerTestCase(TestCase):
         lexer.buffer = code
         with self.assertRaises(UnexpectedTokenError) as error:
             list(lexer.tokens)
-        self.assertEqual(str(error.exception), r"'%' at line 2")
+        self.assertEqual(str(error.exception), r"% at line 2")
 
     def test_types(self):
         code = """
@@ -765,17 +765,17 @@ class WorkingGrammarTestCase(TestCase):
                 var a: integer := 10;
                 var b: integer := a;
                 var c: integer := a + 10;
-                
+
                 var r: real := 10.10;
                 var r1: real := r;
                 var r2: real := r + 10.20;
-                
+
                 r1 := 10;
                 r := a;
-                
+
                 var expr: integer := a + 100 * ((8 - 200) + (2 * 3)) - b;
                 var expr2: real := a + 100 * ((8 - r) + (2 * 3)) - b;
-                
+
                 var t: boolean := true;
                 var f: boolean := false;
                 t := f;
@@ -795,7 +795,6 @@ class WorkingGrammarTestCase(TestCase):
                 
             end.
         """
-
 
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
@@ -823,21 +822,21 @@ class WorkingGrammarTestCase(TestCase):
         self.check_fails("""
             begin
                 var a: integer := 10;
-                var a: integer := 15;           
+                var a: integer := 15;
             end.
         """)
 
         self.check_fails("""
             begin
                 var a: integer;
-                var a: integer := 15;           
+                var a: integer := 15;
             end.
         """)
 
         self.check_fails("""
             begin
                 var a: integer := 15;
-                var a: integer;           
+                var a: integer;
             end.
         """)
 
