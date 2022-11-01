@@ -781,9 +781,18 @@ class WorkingGrammarTestCase(TestCase):
                 t := f;
                 t := not (true and f or false);
                 
-                var s: string := 's t r real + false' + 'adsf'; 
+                var s: string := 's t r real + false' + 'adsf';
+                var s1: string := s;
                 
-                var ch: char := 'a';              
+                var ch: char := 'a';
+                var ch2: char := ch;
+                
+                ch := 'b';
+                ch2 := ch;
+                
+                s := '- / + * false true';
+                s1 := s;
+                
             end.
         """
 
@@ -921,4 +930,14 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+        self.check_fails("""
+            begin
+                var s: string := 'asd' and 'fgh' or 'asdsdf';
+            end.
+        """)
 
+        self.check_fails("""
+            begin
+                var s: string := false;
+            end.
+        """)
