@@ -9,9 +9,15 @@ class SemanticError(TranspilerError):
 
 
 class BaseType(ABC):
+    @staticmethod
+    def get_error_data(node: Node, expected_type: str):
+        return {
+            'node': node,
+            'message': f'{node.token.value} is not compatible with type {expected_type}'
+        }
 
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: {}):
+    def assert_(cls, expr: list[Node], vars_dict: dict):
         cls.expr = expr
         cls.vars_dict = vars_dict
         for node in expr:
@@ -31,31 +37,41 @@ class IntType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
         assert (node.tag == Tag.ID and cls.is_type(node, ["integer"])) \
-                or (node.tag == Tag.NUMBER_INT) \
-                or (node.tag == Tag.MATH_OPERATOR), "lol"
+            or (node.tag == Tag.NUMBER_INT) \
+            or (node.tag == Tag.MATH_OPERATOR) \
+            or (node.tag in [Tag.LBRACKET, Tag.RBRACKET]), \
+                cls.get_error_data(node, 'integer')
 
 
 class RealType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
         assert (node.tag == Tag.ID and cls.is_type(node, ["integer", "real"])) \
-                or (node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT]) \
-                or (node.tag == Tag.MATH_OPERATOR), "lol"
+            or (node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT]) \
+            or (node.tag == Tag.MATH_OPERATOR) \
+            or (node.tag in [Tag.LBRACKET, Tag.RBRACKET]), \
+                cls.get_error_data(node, 'real')
 
 
 class CharType(BaseType):
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: {}):
-        if expr[0] == Tag.ID:
-            assert cls.is_type(expr[0], ["char"])
+    def assert_(cls, expr: list[Node], vars_dict: dict):
+        cls.vars_dict = vars_dict
 
-        assert expr[0] == Tag.QUOTE, "lol"
-        assert expr[2] == Tag.QUOTE, "lol"
+        if expr[0].tag == Tag.ID:
+            assert cls.is_type(expr[0], ["char"]), cls.get_error_data(expr[0], 'char')
+        else:
+            assert expr[0].tag == Tag.QUOTE, cls.get_error_data(expr[0], 'char')
+            assert expr[-1].tag == Tag.QUOTE, cls.get_error_data(expr[0], 'char')
+            assert len(expr) > 2 and len(expr[1].token.value) == 1, {
+                'node': expr[1],
+                'message': 'invalid char, ensure value length is strictly 1'
+            }
 
 
 class StringType(BaseType):
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: {}):
+    def assert_(cls, expr: list[Node], vars_dict: dict):
         cls.is_string = False
         super().assert_(expr, vars_dict)
 
@@ -65,10 +81,41 @@ class StringType(BaseType):
             cls.is_string = not cls.is_string
         elif not cls.is_string:
             assert (node.tag == Tag.ID and cls.is_type(node, ["char", "string"])) \
-            or (node.token.value == "+")
+                or (node.token.value == "+"), cls.get_error_data(node, 'string')
 
 class BooleanType(BaseType):
-    pass
+    @classmethod
+    def check_node(cls, node: Node):
+        if node.tag is Tag.ID:
+            assert cls.is_type(node, ['boolean']), cls.get_error_data(node, 'boolean')
+
+    @classmethod
+    def assert_(cls, expr: list[Node], vars_dict: dict):
+        super().assert_(expr, vars_dict)
+        cls._parse_expr()
+
+    @classmethod
+    def _parse_expr(cls):
+        def parse_node(node: Node):
+            if node.tag in [Tag.BOOLEAN_VALUE, Tag.ID]:
+                return 'True'
+            if node.tag is Tag.NUMBER_INT:
+                return '1'
+            if node.tag is Tag.NUMBER_FLOAT:
+                return '1.0'
+            if node.token.value == '=':
+                return '=='
+
+            return node.token.value
+        pseudo_literal_expr = ' '.join(map(parse_node, cls.expr))
+        error_data = cls.get_error_data(cls.expr[0], 'boolean')
+        try:
+            result = eval(pseudo_literal_expr)
+            assert isinstance(result, bool), error_data
+        except TypeError:
+            raise AssertionError(error_data)
+
+
 
 
 class SemanticAnalyzer:
@@ -85,6 +132,8 @@ class SemanticAnalyzer:
             self.dfs(root, callback=self._check)
         except AssertionError as error:
             node = error.args[0]["node"]
+            if not isinstance(node.tag, Tag):
+                raise ValueError(f'got unexpected non-terminal token: {node.tag}')
             msg = f"{node.token.value} at line {node.token.line}"
             additional_msg = error.args[0]["message"]
             msg += f' - {additional_msg}'
@@ -184,16 +233,26 @@ class SemanticAnalyzer:
         optional_define_var_assignment_node = node.children[4]
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
-        self.dfs(optional_define_var_assignment_node, callback=self._collect_right_terminals, children=node.children)
+        self.dfs(optional_define_var_assignment_node, callback=self._collect_right_terminals)
 
         self.assert_expr_type(left_var)
 
     def _assert_type_of_abstract_statement(self, node: Node):
-        pass
+        left_var = node.children[0]
+        self.assert_var_is_defined(left_var)
+        abstract_statement_node = node.children[1]
 
-    def _collect_right_terminals(self, node: Node, children: list[Node] = None):
-        if isinstance(node.tag, Tag):
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(abstract_statement_node, callback=self._collect_right_terminals)
+
+        self.assert_expr_type(left_var)
+
+    def _collect_right_terminals(self, node: Node, siblings: list[Node] = None):
+        if isinstance(node.tag, Tag) and node.tag is not Tag.ASSIGN:
             self.right_terminals.append(node)
+            if node.tag is Tag.ID and not (len(siblings) > 1 and siblings[1].tag is NT.STRING_PART):
+                self.assert_var_is_defined(node)
 
     def assert_expr_type(self, node: Node):
         id_type = self.get_id_type(node)
@@ -207,6 +266,8 @@ class SemanticAnalyzer:
             StringType.assert_(self.right_terminals, self.vars_dict)
         elif id_type == "boolean":
             BooleanType.assert_(self.right_terminals, self.vars_dict)
+        else:
+            raise ValueError(f'unknown type: {id_type}')
     #     if node_value.tag == Tag.ID:
     #         self.assert_var_is_defined(node_value)
     #         type_node_value = self.vars_dict[node_value.token.value]["type"]
@@ -261,21 +322,21 @@ class SemanticAnalyzer:
 
 
 """
-    
-    
-    
+
+
+
                 s := '- / + * false true'
                 s1 := s; -- Сем еррор
 
-    ТЕСТИКИ 
+    ТЕСТИКИ
         если все норм, то делаем сравнения
 
         Проверка на то чтобы внутри кавычек ничего не обрабатывалось
 
         Если в выражении есть деление, то оно будет real
-      
+
       По умолчанию интовые переменные имеют значение 0
-      
+
       d - оказывается в values для себя самого
       var d: integer := 10;
       d := 15;

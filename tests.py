@@ -780,21 +780,21 @@ class WorkingGrammarTestCase(TestCase):
                 var f: boolean := false;
                 t := f;
                 t := not (true and f or false);
-                
+
                 var s: string := 's t r real + false' + 'adsf';
                 var s1: string := s;
-                
+
                 var ch: char := 'a';
                 var ch2: char := ch;
-                
+
                 ch := 'b';
                 ch2 := ch;
-                
+
                 s := '- / + * false true';
                 s1 := s;
-                
+
                 var k: boolean := 1 + 2 = 3;
-                
+                var lol: boolean := ((1 + 2) * 3 > 4) and not (k or FALSE);
             end.
         """
 
@@ -806,7 +806,6 @@ class WorkingGrammarTestCase(TestCase):
         sem_an.parse(tree.root)
 
     def test_int_convert_to_real(self):
-
         self.check_fails("""
             begin
                 var c: real := 10.0;
@@ -844,33 +843,14 @@ class WorkingGrammarTestCase(TestCase):
 
         self.check_fails("""
             begin
-                var a: boolean := 10;
-            end.
-        """)
-
-        self.check_fails("""
-            begin
-                var a: boolean := true;
-                a := 10;
-            end.
-        """)
-
-        self.check_fails("""
-            begin
-                var a: boolean := 10 and 1;
+                var a: integer := 15;
+                var b: boolean := a;
             end.
         """)
 
         self.check_fails("""
             begin
                 var a: integer := true;
-            end.
-        """)
-
-        self.check_fails("""
-            begin
-                var b: boolean := false;
-                var a: boolean := b and 10;
             end.
         """)
 
@@ -888,14 +868,53 @@ class WorkingGrammarTestCase(TestCase):
 
         self.check_fails("""
             begin
-                var t3: boolean := true and false or t1 + true;                  
+                var t3: boolean := true and false or t1 + true;
             end.
         """)
 
 
         self.check_fails("""
             begin
-                var t: integer := 10 and 8 or 16;                  
+                var t: integer := 10 and 8 or 16;
+            end.
+        """)
+
+    def test_boolean_type(self):
+        self.check_fails("""
+            begin
+                var a: boolean := 10 + (1 = 1);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 1 + 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var b: boolean := false;
+                var a: boolean := b and 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := true;
+                a := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 10 and 1 or 16;
             end.
         """)
 
@@ -908,7 +927,6 @@ class WorkingGrammarTestCase(TestCase):
         with self.assertRaises(SemanticError) as error:
             sem_an.parse(tree.root)
 
-        logger.info(sem_an.vars_dict)
         logger.info(f"Raised {error.exception}")
         # self.assertEqual(str(error.exception), r"'%' at line 2")
 
@@ -928,6 +946,12 @@ class WorkingGrammarTestCase(TestCase):
         self.check_fails("""
             begin
                 var s: char := 'asd';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: char := '';
             end.
         """)
 
