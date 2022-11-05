@@ -9,7 +9,7 @@ class TranspilerError(Exception):
     pass
 
 
-class Symbol(Enum):
+class TranspilerEnum(Enum):
     def __repr__(self) -> str:
         return str(self.value)
 
@@ -23,6 +23,10 @@ class Symbol(Enum):
 
     def __hash__(self) -> int:
         return hash(self.value)
+
+
+class Symbol(TranspilerEnum):
+    pass
 
 
 class Special(Symbol):

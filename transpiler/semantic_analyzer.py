@@ -1,7 +1,28 @@
 from transpiler.tree import SyntaxTree, Node
 from transpiler.settings import Tag, NT
-from transpiler.base import TranspilerError
+from transpiler.base import TranspilerError, TranspilerEnum
 from abc import ABC
+
+
+class VarType(TranspilerEnum):
+    INTEGER = 'integer'
+    REAL = 'real'
+    BOOLEAN = 'boolean'
+    CHAR = 'char'
+    STRING = 'string'
+
+    @classmethod
+    def from_str(cls, str_type):
+        if str_type.lower() == 'integer':
+            return cls.INTEGER
+        if str_type.lower() == 'real':
+            return cls.REAL
+        if str_type.lower() == 'boolean':
+            return cls.BOOLEAN
+        if str_type.lower() == 'char':
+            return cls.CHAR
+        if str_type.lower() == 'string':
+            return cls.STRING
 
 
 class SemanticError(TranspilerError):
@@ -17,9 +38,10 @@ class BaseType(ABC):
         }
 
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: dict):
+    def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
         cls.expr = expr
         cls.vars_dict = vars_dict
+        cls.current_scope = current_scope
         for node in expr:
             cls.check_node(node)
 
@@ -29,40 +51,49 @@ class BaseType(ABC):
 
     @classmethod
     def is_type(cls, node: Node, types: list[str]) -> bool:
-        return cls.vars_dict[node.token.value]["type"].token.value in types
+        for scope in range(cls.current_scope, -1, -1):
+            scoped_vars = cls.vars_dict.get(scope)
+            if not scoped_vars:
+                continue
+            var = scoped_vars.get(node.token.value)
+            if not var:
+                continue
+            return var["type"] in types
+        raise ValueError(f'cannot find variable: {node.token.value}')
 
 
 class IntType(BaseType):
     # учесть деление
     @classmethod
     def check_node(cls, node: Node):
-        assert (node.tag == Tag.ID and cls.is_type(node, ["integer"])) \
+        assert (node.tag == Tag.ID and cls.is_type(node, [VarType.INTEGER])) \
             or (node.tag == Tag.NUMBER_INT) \
             or (node.tag == Tag.MATH_OPERATOR) \
             or (node.tag in [Tag.LBRACKET, Tag.RBRACKET]), \
-                cls.get_error_data(node, 'integer')
+                cls.get_error_data(node, VarType.INTEGER)
 
 
 class RealType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
-        assert (node.tag == Tag.ID and cls.is_type(node, ["integer", "real"])) \
+        assert (node.tag == Tag.ID and cls.is_type(node, [VarType.INTEGER, VarType.REAL])) \
             or (node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT]) \
             or (node.tag == Tag.MATH_OPERATOR) \
             or (node.tag in [Tag.LBRACKET, Tag.RBRACKET]), \
-                cls.get_error_data(node, 'real')
+                cls.get_error_data(node, VarType.REAL)
 
 
 class CharType(BaseType):
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: dict):
+    def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
         cls.vars_dict = vars_dict
+        cls.current_scope = current_scope
 
         if expr[0].tag == Tag.ID:
-            assert cls.is_type(expr[0], ["char"]), cls.get_error_data(expr[0], 'char')
+            assert cls.is_type(expr[0], [VarType.CHAR]), cls.get_error_data(expr[0], VarType.CHAR)
         else:
-            assert expr[0].tag == Tag.QUOTE, cls.get_error_data(expr[0], 'char')
-            assert expr[-1].tag == Tag.QUOTE, cls.get_error_data(expr[0], 'char')
+            assert expr[0].tag == Tag.QUOTE, cls.get_error_data(expr[0], VarType.CHAR)
+            assert expr[-1].tag == Tag.QUOTE, cls.get_error_data(expr[0], VarType.CHAR)
             assert len(expr) > 2 and len(expr[1].token.value) == 1, {
                 'node': expr[1],
                 'message': 'invalid char, ensure value length is strictly 1'
@@ -71,27 +102,27 @@ class CharType(BaseType):
 
 class StringType(BaseType):
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: dict):
+    def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
         cls.is_string = False
-        super().assert_(expr, vars_dict)
+        super().assert_(expr, vars_dict, current_scope)
 
     @classmethod
     def check_node(cls, node: Node):
         if node.tag == Tag.QUOTE:
             cls.is_string = not cls.is_string
         elif not cls.is_string:
-            assert (node.tag == Tag.ID and cls.is_type(node, ["char", "string"])) \
-                or (node.token.value == "+"), cls.get_error_data(node, 'string')
+            assert (node.tag == Tag.ID and cls.is_type(node, [VarType.CHAR, VarType.STRING])) \
+                or (node.token.value == "+"), cls.get_error_data(node, VarType.STRING)
 
 class BooleanType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
         if node.tag is Tag.ID:
-            assert cls.is_type(node, ['boolean']), cls.get_error_data(node, 'boolean')
+            assert cls.is_type(node, [VarType.BOOLEAN]), cls.get_error_data(node, VarType.BOOLEAN)
 
     @classmethod
-    def assert_(cls, expr: list[Node], vars_dict: dict):
-        super().assert_(expr, vars_dict)
+    def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
+        super().assert_(expr, vars_dict, current_scope)
         cls._parse_expr()
 
     @classmethod
@@ -105,31 +136,33 @@ class BooleanType(BaseType):
                 return '1.0'
             if node.token.value == '=':
                 return '=='
-
             return node.token.value
-        pseudo_literal_expr = ' '.join(map(parse_node, cls.expr))
-        error_data = cls.get_error_data(cls.expr[0], 'boolean')
+
+        error_data = cls.get_error_data(cls.expr[0], VarType.BOOLEAN)
         try:
-            result = eval(pseudo_literal_expr)
+            result = eval(' '.join(map(parse_node, cls.expr)))
             assert isinstance(result, bool), error_data
         except TypeError:
             raise AssertionError(error_data)
 
 
-
-
 class SemanticAnalyzer:
-
     def __init__(self, tree: SyntaxTree, filepath: str | None = None):
         self.tree = tree
         self.filepath = filepath
-        self.vars_dict = {}
         self._we_are_in_string = False
         self._visited_nodes = {}
 
+        # 0 for global scope variables
+        # 1 for nested if/for/while/until
+        # 2 for subnested and so on
+        self.current_scope = 0
+        self.vars_dict = {self.current_scope: {}}
+        self.is_in_inline_scope = False
+
     def parse(self, root: Node):
         try:
-            self.dfs(root, callback=self._check)
+            self.dfs(root, callback=self.perform_assertions)
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
@@ -139,11 +172,10 @@ class SemanticAnalyzer:
             msg += f' - {additional_msg}'
             if self.filepath is not None:
                 msg += f" ({self.filepath}:{node.token.line})"
-            raise SemanticError(msg)
+            raise SemanticError(msg) from error
 
-    def dfs(self, node: Node, children: list[Node] = None, callback=None):
-        children = children or []
-        # setattr(node, "visited", True)
+    def dfs(self, node: Node, siblings: list[Node] = None, callback=None):
+        siblings = siblings or []
         callback_name = callback.__name__ if callback is not None else 'default'
         visited = self._visited_nodes.get(callback_name)
         if visited is None:
@@ -152,63 +184,29 @@ class SemanticAnalyzer:
             self._visited_nodes[callback_name].add(node.__hash__())
 
         if callback is not None:
-            callback(node, children)
+            callback(node, siblings)
 
         for child in node.children:
             if child not in self._visited_nodes[callback_name]:
                 self.dfs(child, node.children, callback)
 
-    def _check(self, node: Node, children: list[Node] = None):
-        if self._we_are_in_string and node.tag == Tag.QUOTE:
-            self._we_are_in_string = False
-        elif not self._we_are_in_string:
-            if node.token.tag == Tag.MATH_OPERATOR:
-                pass
+    def perform_assertions(self, node: Node, siblings: list[Node] = None):
+        if node.tag is Tag.BEGIN and not (len(siblings) > 3 and siblings[3].tag is Tag.DOT):
+            self.current_scope += 1
+        elif node.tag is Tag.END:
+            self.vars_dict[self.current_scope] = {}
+            self.current_scope -= 1
 
-            # if node.tag == Tag.ID:
-                # if self.is_left(node, children):
-                    # self.assert_var_is_not_defined(node)
-                    # self.vars_dict[node.token.value] = {
-                    #     "type": children[3]
-                    # }
+        elif node.tag in [Tag.DO, Tag.THEN]:
+            self.is_in_inline_scope = True
+            self.current_scope += 1
+        elif node.tag is Tag.SEMICOLON and self.is_in_inline_scope:
+            self.is_in_inline_scope = False
+            self.vars_dict[self.current_scope] = {}
+            self.current_scope -= 1
 
-        if node.tag in [NT.DEFINE_VAR, NT.ABSTRACT_STATEMENT]:
+        elif node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON, NT.ABSTRACT_STATEMENT]:
             self.assert_type_of_right_expression(node)
-
-            # right_tags = [Tag.NUMBER_INT,
-            #               Tag.NUMBER_FLOAT,
-            #               Tag.BOOLEAN_VALUE,
-            #               Tag.QUOTE,
-            #               Tag.MATH_OPERATOR,
-            #               Tag.BOOLEAN_OPERATOR,
-            #               Tag.BOOLEAN_NOT,
-            #               Tag.COMPARE]
-
-            # if node.tag in right_tags or (node.tag == Tag.ID and not self.is_left(node, children)):
-            #     if node.tag == Tag.QUOTE:
-            #         self._we_are_in_string = True
-            #
-            #     deep_parent = self.get_deep_parent(node)
-            #     self.assert_type_of_right_expression(deep_parent)
-
-                # if deep_parent.tag == NT.DEFINE_VAR:
-                #     id_node: Node = [child for child in deep_parent.children if child.tag == Tag.ID][0]
-                #     id_type: Node = [child for child in deep_parent.children if child.tag == Tag.TYPE_HINT][0]
-                #     self.assert_var_type(id_type, node)
-                # elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
-                #     id_node = deep_parent.children[0]
-                #     self.assert_var_is_defined(id_node)
-                #
-                #     id_type = self.vars_dict[id_node.token.value]["type"]
-                #     self.assert_var_type(id_type, node)
-                #
-                # if "values" in self.vars_dict[id_node.token.value]:
-                #     self.vars_dict[id_node.token.value]["values"].append(node.token.value)
-                # else:
-                #     self.vars_dict[id_node.token.value]["values"] = [node.token.value]
-
-    def get_child_id(self):
-        pass
 
     def get_deep_parent(self, node: Node):
         current = node
@@ -217,18 +215,18 @@ class SemanticAnalyzer:
 
         return current
 
-    def assert_type_of_right_expression(self, deep_parent: Node): # переименовать в node
-        if deep_parent.tag == NT.DEFINE_VAR:
-            self._assert_type_of_define_var(deep_parent)
-        elif deep_parent.tag == NT.ABSTRACT_STATEMENT:
-            self._assert_type_of_abstract_statement(deep_parent)
+    def assert_type_of_right_expression(self, node: Node):
+        if node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON]:
+            self._assert_type_of_define_var(node)
+        elif node.tag is NT.ABSTRACT_STATEMENT:
+            abstract_statement_right_node: Node = node.children[1]
+            if abstract_statement_right_node.children[0].tag is NT.MANIPULATE_VAR:
+                self._assert_type_of_abstract_statement(node)
 
     def _assert_type_of_define_var(self, node: Node):
         left_var = node.children[1]
         self.assert_var_is_not_defined(left_var)
-        self.vars_dict[left_var.token.value] = {
-            "type": node.children[3]
-        }
+        self.save_var(left_var, type=node.children[3].token.value)
 
         optional_define_var_assignment_node = node.children[4]
         self.right_terminals = []
@@ -255,60 +253,35 @@ class SemanticAnalyzer:
                 self.assert_var_is_defined(node)
 
     def assert_expr_type(self, node: Node):
-        id_type = self.get_id_type(node)
-        if id_type == "integer":
-            IntType.assert_(self.right_terminals, self.vars_dict)
-        elif id_type == "real":
-            RealType.assert_(self.right_terminals, self.vars_dict)
-        elif id_type == "char":
-            CharType.assert_(self.right_terminals, self.vars_dict)
-        elif id_type == "string":
-            StringType.assert_(self.right_terminals, self.vars_dict)
-        elif id_type == "boolean":
-            BooleanType.assert_(self.right_terminals, self.vars_dict)
+        var_type = self.get_var_type(node)
+        if var_type == VarType.INTEGER:
+            IntType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+        elif var_type == VarType.REAL:
+            RealType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+        elif var_type == VarType.CHAR:
+            CharType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+        elif var_type == VarType.STRING:
+            StringType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+        elif var_type == VarType.BOOLEAN:
+            BooleanType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
         else:
-            raise ValueError(f'unknown type: {id_type}')
-    #     if node_value.tag == Tag.ID:
-    #         self.assert_var_is_defined(node_value)
-    #         type_node_value = self.vars_dict[node_value.token.value]["type"]
-    #         types_are_equal = node_type.token.value == type_node_value.token.value
-    #         types_left_is_real_right_is_int = node_type.token.value.lower() == "real" and \
-    #                                           type_node_value.token.value.lower() == "integer"
-    #         assert types_are_equal or types_left_is_real_right_is_int, \
-    #                 {"node": node_value, "message": f"type {type_node_value.token.value} of {node_value.token.value} is not assignable to {node_type.token.value}"}
-    #     elif node_value.tag == Tag.NUMBER_INT:
-    #         assert node_type.token.value.lower() in ["integer", "real"], {"node": node_value, "message": f"{node_value.token.value} is not assignable to type {node_type.token.value}"}
-    #     elif node_value.tag == Tag.NUMBER_FLOAT:
-    #         assert node_type.token.value.lower() == "real", {"node": node_value, "message": f"{node_value.token.value} is not assignable to type {node_type.token.value}"}
-    #     elif node_value.tag == Tag.BOOLEAN_VALUE:
-    #         assert node_type.token.value.lower() == "boolean", {"node": node_value, "message": f"{node_value.token.value} is not assignable to type {node_type.token.value}"}
-    #     elif node_value.tag == Tag.QUOTE:
-    #         if node_type.token.value.lower() == "char" and self._we_are_in_string:
-    #             siblings = node_value.parent.children
-    #             only_one_child = not siblings[1].children[1].children
-    #             is_single_char = len(siblings[1].children[0].token.value) == 1
-    #             assert only_one_child and is_single_char, {"node": node_value, "message": f"type string is not assignable to type char"}
-    #         else:
-    #             assert node_type.token.value.lower() == "string", {"node": node_value, "message": f"type string is not assignable to type {node_type.token.value}"}
-    #     elif node_value.tag == Tag.MATH_OPERATOR:
-    #         left_type_value = node_type.token.value.lower()
-    #         if node_value.token.value == '+':
-    #             assert left_type_value in ["integer", "real", "string"], {"node": node_value,
-    #                                                             "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
-    #         else:
-    #             assert left_type_value in ["integer", "real"], {"node": node_value, "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
-    #     elif node_value.tag in [Tag.BOOLEAN_OPERATOR, Tag.BOOLEAN_NOT]:
-    #         left_type_value = node_type.token.value.lower()
-    #         assert left_type_value == "boolean", {"node": node_value,
-    #                                                         "message": f"operator {node_value.token.value} cannot be applied to type {left_type_value}"}
-    #     elif node_value.tag == Tag.COMPARE:
-    #         pass
+            raise ValueError(f'unknown type: {var_type}')
 
     def assert_var_is_defined(self, node_id):
-        assert node_id.token.value in self.vars_dict, {"node": node_id, "message": "variable is not defined"}
+        try:
+            self.get_var_type(node_id)
+        except ValueError as error:
+            raise AssertionError({
+                "node": node_id,
+                "message": "variable is not defined"
+            }) from error
 
     def assert_var_is_not_defined(self, node_id):
-        assert node_id.token.value not in self.vars_dict, {"node": node_id, "message": "variable is already defined"}
+        assert not self.vars_dict.get(self.current_scope) \
+                or node_id.token.value not in self.vars_dict[self.current_scope], {
+            "node": node_id,
+            "message": "variable is already defined"
+        }
 
     def is_left(self, node_cur: Node, children: list[Node]) -> bool:
         if [child for child in children if child.tag == NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT]:
@@ -316,15 +289,25 @@ class SemanticAnalyzer:
 
         return False
 
-    def get_id_type(self, node: Node) -> str:
-        return self.vars_dict[node.token.value]["type"].token.value
+    def save_var(self, node, type):
+        scoped_vars = self.vars_dict.get(self.current_scope, {})
+        scoped_vars[node.token.value] = {'type': VarType.from_str(type)}
+        self.vars_dict[self.current_scope] = scoped_vars;
 
+    def get_var_type(self, node: Node) -> VarType:
+        for i in range(self.current_scope, -1, -1):
+            scoped_vars = self.vars_dict.get(i)
+            if not scoped_vars:
+                continue
+            var_data = scoped_vars.get(node.token.value)
+            if not var_data:
+                continue
+            else:
+                return var_data["type"]
+        raise ValueError(f'variable is not defined: {node.token.value}')
 
 
 """
-
-
-
                 s := '- / + * false true'
                 s1 := s; -- Сем еррор
 

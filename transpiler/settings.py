@@ -64,6 +64,7 @@ class Tag(Terminal):
 class NT(NonTerminal):
     VARS = 'VARS'
     DEFINE_VAR = 'DEFINE_VAR'
+    DEFINE_VAR_WITHOUT_SEMICOLON = 'DEFINE_VAR_WITHOUT_SEMICOLON'
     DEFINE_VARS_RECURSIVE = 'DEFINE_VARS_RECURSIVE'
     DEFINE_VAR_ASSIGNMENT = 'DEFINE_VAR_ASSIGNMENT'
     OPTIONAL_DEFINE_VAR_ASSIGNMENT = 'OPTIONAL_DEFINE_VAR_ASSIGNMENT'
@@ -177,6 +178,15 @@ GRAMMAR_RULES = [
             Tag.SEMICOLON,
         ),
     }),
+    GrammarRule(NT.DEFINE_VAR_WITHOUT_SEMICOLON, {
+        (
+            Tag.VAR,
+            Tag.ID,
+            Tag.COLON,
+            Tag.TYPE_HINT,
+            NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT,
+        ),
+    }),
     GrammarRule(NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT, {
         (Tag.ASSIGN, NT.ABSTRACT_EXPR),
         (Special.LAMBDA,)
@@ -260,7 +270,8 @@ GRAMMAR_RULES = [
     }),
     GrammarRule(NT.COMPLEX_OP_BODY, {
         (Tag.BEGIN, NT.BODY, Tag.END),
-        (NT.ABSTRACT_STATEMENT,)
+        (NT.ABSTRACT_STATEMENT,),
+        (NT.DEFINE_VAR_WITHOUT_SEMICOLON,),
     }),
     GrammarRule(NT.BODY, {
         (NT.DEFINE_VAR, NT.BODY),

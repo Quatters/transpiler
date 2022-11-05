@@ -980,3 +980,64 @@ class WorkingGrammarTestCase(TestCase):
 
         sem_an = self.get_semantic_analyzer(tree)
         sem_an.parse(tree.root)
+
+    def test_scopes(self):
+        code = """
+            var global1: integer := 1;
+            var global2: real := 2.0;
+
+            begin
+                global1 := 2;
+                global2 := global1;
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        sem_an.parse(tree.root)
+
+        self.check_fails("""
+            begin
+                for var a: integer := 1 to 10 do
+                    var b: boolean := true;
+
+                b := false;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var b: integer := 1 to 10 do
+                begin
+                    var a: boolean := true;
+                    if a > 1 then
+                    begin
+                        a := not (a);
+                    end;
+                end;
+
+                a := false;
+            end.
+        """)
+
+    def test_call_functions(self):
+        code = """
+            begin
+                print('lol');
+                var a: real := 1 + sqrt(5);
+            end.
+        """
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        sem_an.parse(tree.root)
+
+    def test_inline_vars(self):
+        self.check_fails("""
+            begin
+                for var a: boolean := 1 to 10 do
+                    var b: boolean := true;
+            end.
+        """)
