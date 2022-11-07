@@ -158,7 +158,6 @@ class SemanticAnalyzer:
         # 2 for subnested and so on
         self.current_scope = 0
         self.vars_dict = {self.current_scope: {}}
-        self.is_in_inline_scope = False
 
     def parse(self, root: Node):
         try:
@@ -191,21 +190,13 @@ class SemanticAnalyzer:
                 self.dfs(child, node.children, callback)
 
     def perform_assertions(self, node: Node, siblings: list[Node] = None):
-        if node.tag is Tag.BEGIN and not (len(siblings) > 3 and siblings[3].tag is Tag.DOT):
-            self.current_scope += 1
-        elif node.tag is Tag.END:
+        if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
             self.vars_dict[self.current_scope] = {}
             self.current_scope -= 1
-
-        elif node.tag in [Tag.DO, Tag.THEN]:
-            self.is_in_inline_scope = True
+        elif node.tag in [Tag.FOR, Tag.IF, Tag.UNTIL, Tag.WHILE]:
             self.current_scope += 1
-        elif node.tag is Tag.SEMICOLON and self.is_in_inline_scope:
-            self.is_in_inline_scope = False
-            self.vars_dict[self.current_scope] = {}
-            self.current_scope -= 1
 
-        elif node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON, NT.ABSTRACT_STATEMENT]:
+        elif node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON, NT.ABSTRACT_STATEMENT, NT.DEFINE_INLINE_VAR]:
             self.assert_type_of_right_expression(node)
 
     def get_deep_parent(self, node: Node):
@@ -222,6 +213,10 @@ class SemanticAnalyzer:
             abstract_statement_right_node: Node = node.children[1]
             if abstract_statement_right_node.children[0].tag is NT.MANIPULATE_VAR:
                 self._assert_type_of_abstract_statement(node)
+            elif abstract_statement_right_node.children[0].tag is NT.CALL:
+                pass
+        elif node.tag is NT.DEFINE_INLINE_VAR:
+            self._assert_type_of_inline_define_var(node)
 
     def _assert_type_of_define_var(self, node: Node):
         left_var = node.children[1]
@@ -235,6 +230,28 @@ class SemanticAnalyzer:
 
         self.assert_expr_type(left_var)
 
+    def _assert_type_of_inline_define_var(self, node: Node):
+        left_var = node.children[1]
+        self.assert_var_is_not_defined(left_var)
+        node_type = node.children[3].token.value
+        assert node_type not in ["real", "string"], {"node": left_var, "message": "iterator of for loop must be integer, char or boolean"}
+        self.save_var(left_var, node_type)
+
+        define_var_assignment_node = node.children[4]
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(define_var_assignment_node, callback=self._collect_right_terminals)
+
+        self.assert_expr_type(left_var)
+
+        abstract_expr_node = node.parent.children[3]
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(abstract_expr_node, callback=self._collect_right_terminals)
+
+        self.assert_expr_type(left_var)
+
+
     def _assert_type_of_abstract_statement(self, node: Node):
         left_var = node.children[0]
         self.assert_var_is_defined(left_var)
@@ -243,6 +260,13 @@ class SemanticAnalyzer:
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
         self.dfs(abstract_statement_node, callback=self._collect_right_terminals)
+
+        self.assert_expr_type(left_var)
+
+    def _assert_type_of_abstract_expr(self, node: Node, left_var):
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(node, callback=self._collect_right_terminals)
 
         self.assert_expr_type(left_var)
 
@@ -292,7 +316,7 @@ class SemanticAnalyzer:
     def save_var(self, node, type):
         scoped_vars = self.vars_dict.get(self.current_scope, {})
         scoped_vars[node.token.value] = {'type': VarType.from_str(type)}
-        self.vars_dict[self.current_scope] = scoped_vars;
+        self.vars_dict[self.current_scope] = scoped_vars
 
     def get_var_type(self, node: Node) -> VarType:
         for i in range(self.current_scope, -1, -1):
@@ -308,6 +332,8 @@ class SemanticAnalyzer:
 
 
 """
+    for интерация - char, int, boolean
+
                 s := '- / + * false true'
                 s1 := s; -- Сем еррор
 
