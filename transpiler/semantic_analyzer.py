@@ -50,6 +50,13 @@ class BaseType(ABC):
         raise NotImplementedError
 
     @classmethod
+    def is_var(cls, node: Node):
+        try:
+            return node.parent.children[1].children[0].tag is not NT.CALL
+        except (IndexError):
+            return True
+
+    @classmethod
     def is_type(cls, node: Node, types: list[str]) -> bool:
         for scope in range(cls.current_scope, -1, -1):
             scoped_vars = cls.vars_dict.get(scope)
@@ -66,20 +73,33 @@ class IntType(BaseType):
     # учесть деление
     @classmethod
     def check_node(cls, node: Node):
-        assert (node.tag == Tag.ID and cls.is_type(node, [VarType.INTEGER])) \
-            or (node.tag == Tag.NUMBER_INT) \
-            or (node.tag == Tag.MATH_OPERATOR) \
-            or (node.tag in [Tag.LBRACKET, Tag.RBRACKET]), \
+        acceptable = [
+            Tag.NUMBER_INT,
+            Tag.MATH_OPERATOR,
+            Tag.LBRACKET,
+            Tag.RBRACKET,
+            Tag.COMMA,
+        ]
+        assert node.tag in acceptable \
+            or node.tag is Tag.ID and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER]) \
+            or node.tag is Tag.ID and not cls.is_var(node), \
                 cls.get_error_data(node, VarType.INTEGER)
 
 
 class RealType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
-        assert (node.tag == Tag.ID and cls.is_type(node, [VarType.INTEGER, VarType.REAL])) \
-            or (node.tag in [Tag.NUMBER_INT, Tag.NUMBER_FLOAT]) \
-            or (node.tag == Tag.MATH_OPERATOR) \
-            or (node.tag in [Tag.LBRACKET, Tag.RBRACKET]), \
+        acceptable = [
+            Tag.NUMBER_INT,
+            Tag.NUMBER_FLOAT,
+            Tag.MATH_OPERATOR,
+            Tag.LBRACKET,
+            Tag.RBRACKET,
+            Tag.COMMA,
+        ]
+        assert node.tag in acceptable \
+            or (node.tag is Tag.ID and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER, VarType.REAL])) \
+            or node.tag is Tag.ID and not cls.is_var(node), \
                 cls.get_error_data(node, VarType.REAL)
 
 
@@ -89,8 +109,10 @@ class CharType(BaseType):
         cls.vars_dict = vars_dict
         cls.current_scope = current_scope
 
-        if expr[0].tag == Tag.ID:
-            assert cls.is_type(expr[0], [VarType.CHAR]), cls.get_error_data(expr[0], VarType.CHAR)
+        if expr[0].tag is Tag.ID:
+            assert cls.is_type(expr[0], [VarType.CHAR]) \
+                or not cls.is_var(expr[0]), \
+                    cls.get_error_data(expr[0], VarType.CHAR)
         else:
             assert expr[0].tag == Tag.QUOTE, cls.get_error_data(expr[0], VarType.CHAR)
             assert expr[-1].tag == Tag.QUOTE, cls.get_error_data(expr[0], VarType.CHAR)
@@ -111,14 +133,18 @@ class StringType(BaseType):
         if node.tag == Tag.QUOTE:
             cls.is_string = not cls.is_string
         elif not cls.is_string:
-            assert (node.tag == Tag.ID and cls.is_type(node, [VarType.CHAR, VarType.STRING])) \
-                or (node.token.value == "+"), cls.get_error_data(node, VarType.STRING)
+            assert (node.token.value == "+") \
+                or (node.tag == Tag.ID and cls.is_var(node) and cls.is_type(node, [VarType.CHAR, VarType.STRING])) \
+                or (node.tag is Tag.ID and not cls.is_var(node)), \
+                    cls.get_error_data(node, VarType.STRING)
 
 class BooleanType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
         if node.tag is Tag.ID:
-            assert cls.is_type(node, [VarType.BOOLEAN]), cls.get_error_data(node, VarType.BOOLEAN)
+            assert not cls.is_var(node) \
+                or cls.is_type(node, [VarType.BOOLEAN]), \
+                    cls.get_error_data(node, VarType.BOOLEAN)
 
     @classmethod
     def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
@@ -158,6 +184,7 @@ class SemanticAnalyzer:
         # 2 for subnested and so on
         self.current_scope = 0
         self.vars_dict = {self.current_scope: {}}
+        self.__is_in_string = False
 
     def parse(self, root: Node):
         try:
@@ -196,15 +223,23 @@ class SemanticAnalyzer:
         elif node.tag in [Tag.FOR, Tag.IF, Tag.UNTIL, Tag.WHILE]:
             self.current_scope += 1
 
+        elif node.tag is NT.CALL_ARGS:
+            self.check_call_args_for_vars(node)
         elif node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON, NT.ABSTRACT_STATEMENT, NT.DEFINE_INLINE_VAR]:
             self.assert_type_of_right_expression(node)
 
-    def get_deep_parent(self, node: Node):
-        current = node
-        while current is not None and current.tag != NT.DEFINE_VAR and current.tag != NT.ABSTRACT_STATEMENT:
-            current = current.parent
+    def check_call_args_for_vars(self, call_args_node: Node):
+        if call_args_node.children:
+            abstract_expr_node = call_args_node.children[0]
+            self.dfs(abstract_expr_node, callback=self._perform_call_args_assertions)
 
-        return current
+    def _perform_call_args_assertions(self, node: Node, siblings: list[Node]):
+        if node.tag is Tag.QUOTE:
+            self.__is_in_string = not self.__is_in_string
+        elif not self.__is_in_string and node.tag is Tag.ID and not self._is_func_call(node):
+            self.assert_var_is_defined(node)
+        elif node.tag is NT.CALL_ARGS:
+            self.check_call_args_for_vars(node)
 
     def assert_type_of_right_expression(self, node: Node):
         if node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON]:
@@ -234,7 +269,10 @@ class SemanticAnalyzer:
         left_var = node.children[1]
         self.assert_var_is_not_defined(left_var)
         node_type = node.children[3].token.value
-        assert node_type not in ["real", "string"], {"node": left_var, "message": "iterator of for loop must be integer, char or boolean"}
+        assert VarType.from_str(node_type) not in [VarType.REAL, VarType.STRING], {
+            "node": left_var,
+            "message": "iterator of for loop must be integer, char or boolean"
+        }
         self.save_var(left_var, node_type)
 
         define_var_assignment_node = node.children[4]
@@ -273,8 +311,16 @@ class SemanticAnalyzer:
     def _collect_right_terminals(self, node: Node, siblings: list[Node] = None):
         if isinstance(node.tag, Tag) and node.tag is not Tag.ASSIGN:
             self.right_terminals.append(node)
-            if node.tag is Tag.ID and not (len(siblings) > 1 and siblings[1].tag is NT.STRING_PART):
-                self.assert_var_is_defined(node)
+            if node.tag is Tag.ID \
+                    and not (len(siblings) > 1 and siblings[1].tag is NT.STRING_PART):
+                if not self._is_func_call(node):
+                    self.assert_var_is_defined(node)
+
+    def _is_func_call(self, id_node):
+        try:
+            return id_node.parent.children[1].children[0].tag is NT.CALL
+        except IndexError:
+            return False
 
     def assert_expr_type(self, node: Node):
         var_type = self.get_var_type(node)

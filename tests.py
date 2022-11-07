@@ -928,7 +928,6 @@ class WorkingGrammarTestCase(TestCase):
             sem_an.parse(tree.root)
 
         logger.info(f"Raised {error.exception}")
-        # self.assertEqual(str(error.exception), r"'%' at line 2")
 
     def test_string(self):
         self.check_fails("""
@@ -1024,8 +1023,13 @@ class WorkingGrammarTestCase(TestCase):
     def test_call_functions(self):
         code = """
             begin
-                print('lol');
+                print('some text');
+
                 var a: real := 1 + sqrt(5);
+
+                var b: integer := func1(func2(1), 1);
+                var c: integer := func1(func2(func3(func4())));
+                var d: integer := func1(func2(func3(c, b))) + func1();
             end.
         """
         lexer = self.get_lexer(code)
