@@ -1041,3 +1041,23 @@ class WorkingGrammarTestCase(TestCase):
                     var b: boolean := true;
             end.
         """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                    i := i + 1;
+                    print(i);
+                i := 12;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    print(i);
+                    i := i + 1;
+                end;
+                i := 12;
+            end.
+        """)
