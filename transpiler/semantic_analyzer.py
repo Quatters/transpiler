@@ -237,7 +237,6 @@ class SemanticAnalyzer:
     def __init__(self, tree: SyntaxTree, filepath: str | None = None):
         self.tree = tree
         self.filepath = filepath
-        self._we_are_in_string = False
         self._visited_nodes = {}
 
         # 0 for global scope variables
@@ -281,11 +280,25 @@ class SemanticAnalyzer:
         if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
             self.vars_dict[self.current_scope] = {}
             self.current_scope -= 1
-        elif node.tag in [Tag.FOR, Tag.IF, Tag.UNTIL, Tag.WHILE]:
+        elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
             self.current_scope += 1
             if node.tag is Tag.IF:
                 abstract_expr_node = siblings[1].children[0]
+            elif node.tag is Tag.REPEAT:
+                abstract_expr_node = siblings[3]
+            elif node.tag is Tag.WHILE:
+                abstract_expr_node = siblings[1]
+
+            if node.tag is not Tag.FOR:
                 self.assert_type_of_expression(abstract_expr_node)
+
+        elif node.tag is Tag.ELSE:
+            self.vars_dict[self.current_scope] = {}
+            child_else_block = siblings[2]
+            assert not child_else_block.children, {
+                'node': child_else_block.children[0],
+                'message': 'multiple else blocks are not allowed'
+            }
 
         elif node.tag is NT.CALL_ARGS:
             self.check_call_args_for_vars(node)
@@ -306,16 +319,26 @@ class SemanticAnalyzer:
             self.check_call_args_for_vars(node)
 
     def assert_type_of_expression(self, node: Node):
+        assert_func = None
+        kwargs = {}
+
         if node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON]:
-            self._assert_type_of_define_var(node)
+            assert_func = self._assert_type_of_define_var
         elif node.tag is NT.ABSTRACT_STATEMENT:
             abstract_statement_right_node: Node = node.children[1]
-            if abstract_statement_right_node.children[0].tag is NT.MANIPULATE_VAR:
-                self._assert_type_of_abstract_statement(node)
+            if (manipulate_var_node := abstract_statement_right_node.children[0]).tag is NT.MANIPULATE_VAR:
+                assign_node = manipulate_var_node.children[0].children[0]
+                if assign_node.tag is not Tag.ASSIGN:
+                    raise NotImplementedError('operational assignments are not yet implemented')
+                assert_func = self._assert_type_of_abstract_statement
         elif node.tag is NT.DEFINE_INLINE_VAR:
-            self._assert_type_of_inline_define_var(node)
+            assert_func = self._assert_type_of_inline_define_var
         elif node.tag is NT.ABSTRACT_EXPR:
-            self._assert_abstract_expr_type(node, VarType.BOOLEAN)
+            assert_func = self._assert_abstract_expr_type
+            kwargs = {'type': VarType.BOOLEAN}
+
+        if assert_func is not None:
+            assert_func(node, **kwargs)
 
     def _assert_abstract_expr_type(self, abstract_expr_node: Node, type: VarType):
         self.right_terminals = []

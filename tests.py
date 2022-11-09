@@ -988,7 +988,7 @@ class WorkingGrammarTestCase(TestCase):
         sem_an.parse(tree.root)
 
     def test_scopes(self):
-        code = """
+        self.check_not_fails("""
             var global1: integer := 1;
             var global2: real := 2.0;
 
@@ -996,12 +996,38 @@ class WorkingGrammarTestCase(TestCase):
                 global1 := 2;
                 global2 := global1;
             end.
-        """
-        lexer = self.get_lexer(code)
-        sa = self.get_syntax_analyzer()
-        tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse(tree.root)
+        """)
+
+        self.check_fails("""
+            begin
+                if (10 > 15) then
+                begin
+                    var i: integer := 10;
+                end
+                else if (100 > 90) then
+                begin
+                    print(i);
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (10 > 15) then
+                    var i: integer := 10
+                else if (10 > 15) then
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (10 > 15) then
+                    var i: integer := 10
+                else
+                    print(i);
+            end.
+        """)
 
         self.check_fails("""
             begin
@@ -1179,7 +1205,7 @@ class WorkingGrammarTestCase(TestCase):
         self.check_not_fails("""
             begin
                 if ('asd' > 'dsa') then
-                    begin
+                begin
                     print('lol');
                 end;
             end.
@@ -1188,6 +1214,19 @@ class WorkingGrammarTestCase(TestCase):
         self.check_not_fails("""
             begin
                 if (true > 15) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true) then
+                begin
+                    print('lol');
+                end
+                else
                 begin
                     print('lol');
                 end;
@@ -1211,21 +1250,85 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+    def test_until_loop_semantic(self):
+        self.check_not_fails("""
+            begin
+                var b: boolean := 1 > 3;
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until not (true) or b;
+            end.
+        """)
 
+        self.check_not_fails("""
+            begin
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until 'c' > 'a';
+            end.
+        """)
 
+        self.check_fails("""
+            begin
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until 'c';
+            end.
+        """)
 
+        self.check_fails("""
+            var a: integer;
+            var b: real;
+            begin
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until a - b;
+            end.
+        """)
 
+    def test_while_loop_semantic(self):
+        self.check_not_fails("""
+            var b: boolean := false;
 
+            begin
+                var a: boolean := false;
+                while a or true and 1 > 2 and 3 = 4 or not (7 - 8 <> -1) do
+                    print();
 
+                while a or true and 1 > 2 and 3 = 4 or not (7 - 8 <> -1) do
+                begin
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                    b := not(b);
+                end;
+            end.
+        """)
 
-# fail scope
-# begin
-#                 if (10 > 15) then
-#                 begin
-#                     var i: integer := 10;
-#                 end
-#                 else if (100 > 90) then
-#                 begin
-#                     print(i);
-#                 end;
-#             end.
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+
+                while a do
+                    print();
+            end.
+        """)
+
+    def test_operational_assignments(self):
+        code = """
+            begin
+                var a: integer := 1;
+                a += 1;
+            end.
+        """
+
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+
+        with self.assertRaises(NotImplementedError):
+            sem_an.parse(tree.root)
