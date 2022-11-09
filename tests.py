@@ -1091,8 +1091,6 @@ class WorkingGrammarTestCase(TestCase):
                 begin
                     print('lol');
                 end;
-                
-                
             end.
         """)
 
@@ -1170,7 +1168,6 @@ class WorkingGrammarTestCase(TestCase):
         self.check_not_fails("""
             begin
                 var b: boolean := sqrt(1) > sqrt(3);
-            
                 if (sqrt(1) > sqrt(3)) then
                 begin
                     print('lol');
@@ -1187,10 +1184,8 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        self.check_fails("""
+        self.check_not_fails("""
             begin
-                var a: boolean := true;
-                var b: integer := 15;
                 if (true > 15) then
                 begin
                     print('lol');

@@ -80,7 +80,7 @@ class BaseType(ABC):
             return True
 
     @classmethod
-    def is_type(cls, node: Node, types: list[str]) -> bool:
+    def get_var_type(cls, node: Node) -> VarType:
         for scope in range(cls.current_scope, -1, -1):
             scoped_vars = cls.vars_dict.get(scope)
             if not scoped_vars:
@@ -88,8 +88,20 @@ class BaseType(ABC):
             var = scoped_vars.get(node.token.value)
             if not var:
                 continue
-            return var["type"] in types
+            return var["type"]
         raise ValueError(f'cannot find variable: {node.token.value}')
+
+    @classmethod
+    def is_type(cls, node: Node, types: list[VarType]) -> bool:
+        return cls.get_var_type(node) in types
+
+    @classmethod
+    def is_defined(cls, node_id: Node):
+        try:
+            cls.is_type(node_id, [])
+            return True
+        except ValueError:
+            return False
 
 
 class IntType(BaseType):
@@ -168,7 +180,7 @@ class BooleanType(BaseType):
             cls.is_string = not cls.is_string
         if not cls.is_string and node.tag is Tag.ID:
             assert not cls.is_var(node) \
-                or cls.is_type(node, [VarType.BOOLEAN]), \
+                or cls.is_defined(node), \
                     cls.get_error_data(node, VarType.BOOLEAN)
 
     @classmethod
@@ -179,12 +191,27 @@ class BooleanType(BaseType):
 
     @classmethod
     def _parse_expr(cls):
+        cls.is_string = False
+
         def parse_node(node: Node):
+            if node.tag is Tag.QUOTE:
+                cls.is_string = not cls.is_string
+                return '"'
             if node.tag in [Tag.BOOLEAN_VALUE]:
                 return 'True'
-            if node.tag is Tag.ID:
+            if node.tag is Tag.ID and not cls.is_string:
                 if cls.is_var(node):
-                    return 'True'
+                    var_type = cls.get_var_type(node)
+                    if var_type is VarType.BOOLEAN:
+                        return 'True'
+                    elif var_type is VarType.INTEGER:
+                        return '1'
+                    elif var_type is VarType.REAL:
+                        return '1.0'
+                    elif var_type is VarType.STRING:
+                        return '"string"'
+                    elif var_type is VarType.CHAR:
+                        return '"a"'
                 return('AnyComparableMock')
             if node.tag is Tag.NUMBER_INT:
                 return '1'
@@ -256,11 +283,14 @@ class SemanticAnalyzer:
             self.current_scope -= 1
         elif node.tag in [Tag.FOR, Tag.IF, Tag.UNTIL, Tag.WHILE]:
             self.current_scope += 1
+            if node.tag is Tag.IF:
+                abstract_expr_node = siblings[1].children[0]
+                self.assert_type_of_expression(abstract_expr_node)
 
         elif node.tag is NT.CALL_ARGS:
             self.check_call_args_for_vars(node)
         elif node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON, NT.ABSTRACT_STATEMENT, NT.DEFINE_INLINE_VAR]:
-            self.assert_type_of_right_expression(node)
+            self.assert_type_of_expression(node)
 
     def check_call_args_for_vars(self, call_args_node: Node):
         if call_args_node.children:
@@ -275,17 +305,23 @@ class SemanticAnalyzer:
         elif node.tag is NT.CALL_ARGS:
             self.check_call_args_for_vars(node)
 
-    def assert_type_of_right_expression(self, node: Node):
+    def assert_type_of_expression(self, node: Node):
         if node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON]:
             self._assert_type_of_define_var(node)
         elif node.tag is NT.ABSTRACT_STATEMENT:
             abstract_statement_right_node: Node = node.children[1]
             if abstract_statement_right_node.children[0].tag is NT.MANIPULATE_VAR:
                 self._assert_type_of_abstract_statement(node)
-            elif abstract_statement_right_node.children[0].tag is NT.CALL:
-                pass
         elif node.tag is NT.DEFINE_INLINE_VAR:
             self._assert_type_of_inline_define_var(node)
+        elif node.tag is NT.ABSTRACT_EXPR:
+            self._assert_abstract_expr_type(node, VarType.BOOLEAN)
+
+    def _assert_abstract_expr_type(self, abstract_expr_node: Node, type: VarType):
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(abstract_expr_node, callback=self._collect_right_terminals)
+        self.assert_expr_type(abstract_expr_node, type)
 
     def _assert_type_of_define_var(self, node: Node):
         left_var = node.children[1]
@@ -323,7 +359,6 @@ class SemanticAnalyzer:
 
         self.assert_expr_type(left_var)
 
-
     def _assert_type_of_abstract_statement(self, node: Node):
         left_var = node.children[0]
         self.assert_var_is_defined(left_var)
@@ -356,8 +391,8 @@ class SemanticAnalyzer:
         except IndexError:
             return False
 
-    def assert_expr_type(self, node: Node):
-        var_type = self.get_var_type(node)
+    def assert_expr_type(self, node: Node, var_type: VarType = None):
+        var_type = var_type or self.get_var_type(node)
         if var_type == VarType.INTEGER:
             IntType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
         elif var_type == VarType.REAL:

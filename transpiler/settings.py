@@ -73,6 +73,7 @@ class NT(NonTerminal):
     OPERATOR = 'OPERATOR'
 
     ABSTRACT_EXPR = 'ABSTRACT_EXPR'
+    ABSTRACT_COMPLEX_EXPR = 'ABSTRACT_COMPLEX_EXPR'
 
     STRING_EXPR = 'STRING_EXPR'
     STRING_PART = 'STRING_PART'
@@ -203,6 +204,10 @@ GRAMMAR_RULES = [
         ),
     }),
 
+    GrammarRule(NT.ABSTRACT_EXPR, {
+        (NT.ABSTRACT_COMPLEX_EXPR,),
+    }),
+
     # strings
     GrammarRule(NT.STRING_EXPR, {
         (Tag.QUOTE, NT.STRING_PART, Tag.QUOTE),
@@ -214,7 +219,7 @@ GRAMMAR_RULES = [
     ),
 
     # boolean and math expressions
-    GrammarRule(NT.ABSTRACT_EXPR, {
+    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR, {
         (NT.ABSTRACT_EXPR_VALUE, NT.ABSTRACT_EXPR_RIGHT),
     }),
     GrammarRule(NT.ABSTRACT_EXPR_RIGHT, {
