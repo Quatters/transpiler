@@ -721,7 +721,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_if(self):
+    def test_if_syntax(self):
         code = """
             begin
                 var a: integer := 1;
@@ -918,6 +918,13 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+    def check_not_fails(self, code):
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        sem_an.parse(tree.root)
+
     def check_fails(self, code):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
@@ -1043,7 +1050,7 @@ class WorkingGrammarTestCase(TestCase):
         sem_an = self.get_semantic_analyzer(tree)
         sem_an.parse(tree.root)
 
-    def test_inline_vars(self):
+    def test_for_loop_semantic(self):
         self.check_fails("""
             begin
                 for var a: boolean := 1 to 10 do
@@ -1076,3 +1083,133 @@ class WorkingGrammarTestCase(TestCase):
                 i := 12;
             end.
         """)
+
+    def test_if_semantic(self):
+        self.check_not_fails("""
+            begin
+                if (5 > 4) then
+                begin
+                    print('lol');
+                end;
+                
+                
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (5.0 > 4.0) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true > false) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: integer := 10;
+                var b: integer := 15;
+                if (a > b) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: real := 1.0;
+                var b: integer := 15;
+                if (a > b) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (10 > 15) then
+                begin
+                    print('lol');
+                end
+                else if (100 < 90) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true and false) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var b: boolean := sqrt(1) > sqrt(3);
+            
+                if (sqrt(1) > sqrt(3)) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if ('asd' > 'dsa') then
+                    begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := true;
+                var b: integer := 15;
+                if (true > 15) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+
+
+
+
+# fail scope
+# begin
+#                 if (10 > 15) then
+#                 begin
+#                     var i: integer := 10;
+#                 end
+#                 else if (100 > 90) then
+#                 begin
+#                     print(i);
+#                 end;
+#             end.

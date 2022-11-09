@@ -231,6 +231,7 @@ GRAMMAR_RULES = [
         (Tag.BOOLEAN_VALUE,),
         (NT.BOOLEAN_OPTIONAL_NOT, NT.ABSTRACT_EXPR_WITH_NOT),
         (NT.STRING_EXPR,),
+        (Tag.COMPARE, NT.COMPARABLE),
     }),
     GrammarRule(NT.ABSTRACT_EXPR_OP, {
         (Tag.MATH_OPERATOR,),
