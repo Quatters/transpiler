@@ -1037,6 +1037,7 @@ class WorkingGrammarTestCase(TestCase):
                 var b: integer := func1(func2(1), 1);
                 var c: integer := func1(func2(func3(func4())));
                 var d: integer := func1(func2(func3(c, b))) + func1();
+                var e: integer := func1(func2(func3(func4(5, sqrt(8))), sqrt(2))) + func1(func2(func3(c, b))) + func1();
 
                 var lol: boolean := 1.2 > sqrt(2);
                 var lol2: boolean := sqrt(1) > sqrt(2);
@@ -1192,6 +1193,26 @@ class WorkingGrammarTestCase(TestCase):
                 end;
             end.
         """)
+
+        self.check_fails("""
+            begin
+                if (true) then
+                begin
+                    print('lol');
+                end
+                else
+                begin
+                    print('lol');
+                end
+                else
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+
+
 
 
 
