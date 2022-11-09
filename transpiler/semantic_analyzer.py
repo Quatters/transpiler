@@ -29,6 +29,29 @@ class SemanticError(TranspilerError):
     pass
 
 
+class AnyComparableMock:
+    def __init__(self, *args):
+        pass
+
+    def __eq__(self, *args):
+        return True
+
+    def __lt__(self, *args):
+        return True
+
+    def __gt__(self, *args):
+        return True
+
+    def __le__(self, *args):
+        return True
+
+    def __ge__(self, *args):
+        return True
+
+    def __ne__(self, *args):
+        return True
+
+
 class BaseType(ABC):
     @staticmethod
     def get_error_data(node: Node, expected_type: str):
@@ -141,33 +164,44 @@ class StringType(BaseType):
 class BooleanType(BaseType):
     @classmethod
     def check_node(cls, node: Node):
-        if node.tag is Tag.ID:
+        if node.tag == Tag.QUOTE:
+            cls.is_string = not cls.is_string
+        if not cls.is_string and node.tag is Tag.ID:
             assert not cls.is_var(node) \
                 or cls.is_type(node, [VarType.BOOLEAN]), \
                     cls.get_error_data(node, VarType.BOOLEAN)
 
     @classmethod
     def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
+        cls.is_string = False
         super().assert_(expr, vars_dict, current_scope)
         cls._parse_expr()
 
     @classmethod
     def _parse_expr(cls):
         def parse_node(node: Node):
-            if node.tag in [Tag.BOOLEAN_VALUE, Tag.ID]:
+            if node.tag in [Tag.BOOLEAN_VALUE]:
                 return 'True'
+            if node.tag is Tag.ID:
+                if cls.is_var(node):
+                    return 'True'
+                return('AnyComparableMock')
             if node.tag is Tag.NUMBER_INT:
                 return '1'
             if node.tag is Tag.NUMBER_FLOAT:
                 return '1.0'
             if node.token.value == '=':
                 return '=='
+            if node.token.value == '<>':
+                return '!='
             return node.token.value
 
         error_data = cls.get_error_data(cls.expr[0], VarType.BOOLEAN)
         try:
-            result = eval(' '.join(map(parse_node, cls.expr)))
-            assert isinstance(result, bool), error_data
+            str_expr = ' '.join(map(parse_node, cls.expr))
+            internal_vars = {}
+            exec(f'__mock_value__ = {str_expr}', globals(), internal_vars)
+            assert isinstance(internal_vars['__mock_value__'], bool), error_data
         except TypeError:
             raise AssertionError(error_data)
 

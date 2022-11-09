@@ -1030,6 +1030,11 @@ class WorkingGrammarTestCase(TestCase):
                 var b: integer := func1(func2(1), 1);
                 var c: integer := func1(func2(func3(func4())));
                 var d: integer := func1(func2(func3(c, b))) + func1();
+
+                var lol: boolean := 1.2 > sqrt(2);
+                var lol2: boolean := sqrt(1) > sqrt(2);
+                var lol3: boolean := '__lol__' < 'kek';
+                var lol4: boolean := '' <> '' or '' >= '' or '' <= '' or '' > '' or '' = '';
             end.
         """
         lexer = self.get_lexer(code)
