@@ -470,10 +470,9 @@ class SemanticAnalyzer:
 
 
 """
-    for интерация - char, int, boolean
-
-                s := '- / + * false true'
-                s1 := s; -- Сем еррор
+    while, until
+    несколько else
+    тесты на if
 
     ТЕСТИКИ
         если все норм, то делаем сравнения
