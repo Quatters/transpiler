@@ -1077,24 +1077,24 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        # self.check_fails("""
-        #     var a: integer := 10;
-        #     begin
-        #         for var a: integer := 1 to 10 do
-        #             print(a);
-        #     end.
-        # """)
-        #
-        # self.check_fails("""
-        #     var a: integer := 10;
-        #     begin
-        #         if true then
-        #         begin
-        #             for var a: integer := 1 to 10 do
-        #                 print();
-        #         end;
-        #     end.
-        # """)
+        self.check_fails("""
+            var a: integer := 10;
+            begin
+                for var a: integer := 1 to 10 do
+                    print(a);
+            end.
+        """)
+
+        self.check_fails("""
+            var a: integer := 10;
+            begin
+                if true then
+                begin
+                    for var a: integer := 1 to 10 do
+                        print();
+                end;
+            end.
+        """)
 
     def test_call_functions(self):
         code = """
@@ -1628,7 +1628,7 @@ class WorkingGrammarTestCase(TestCase):
                 while a or true and 1 > 2 and 3 = 4 or not (7 - 8 <> -1) do
                 begin
                     print();
-                    var a: real := somefunc() - sqrt(2.4);
+                    var c: real := somefunc() - sqrt(2.4);
                     b := not(b);
                 end;
             end.
@@ -1756,13 +1756,13 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
         #Syntax Error
-        self.check_not_fails("""
-            begin
-                while true do
-                    if true then
-                        print();
-            end.
-        """)
+        # self.check_not_fails("""
+        #     begin
+        #         while true do
+        #             if true then
+        #                 print();
+        #     end.
+        # """)
 
         self.check_fails("""
             begin

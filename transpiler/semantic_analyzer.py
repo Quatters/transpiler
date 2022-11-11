@@ -439,11 +439,14 @@ class SemanticAnalyzer:
             }) from error
 
     def assert_var_is_not_defined(self, node_id):
-        assert not self.vars_dict.get(self.current_scope) \
-                or node_id.token.value not in self.vars_dict[self.current_scope], {
-            "node": node_id,
-            "message": "variable is already defined"
-        }
+        try:
+            self.get_var_type(node_id)
+            raise AssertionError({
+                "node": node_id,
+                "message": "variable is defined"
+            })
+        except ValueError:
+            pass
 
     def is_left(self, node_cur: Node, children: list[Node]) -> bool:
         if [child for child in children if child.tag == NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT]:
