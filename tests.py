@@ -659,7 +659,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
         sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse(tree.root)
+        sem_an.parse()
 
     def check_fails(self, code, err: Exception = SemanticError):
         lexer = self.get_lexer(code)
@@ -668,7 +668,7 @@ class WorkingGrammarTestCase(TestCase):
 
         sem_an = self.get_semantic_analyzer(tree)
         with self.assertRaises(err) as error:
-            sem_an.parse(tree.root)
+            sem_an.parse()
 
         logger.info(f"Raised {error.exception}")
 
@@ -813,7 +813,7 @@ class WorkingGrammarTestCase(TestCase):
 
                 var k: boolean := 1 + 2 = 3;
                 var lol: boolean := ((1 + 2) * 3 > 4) and not (k or FALSE);
-                
+
                 var new_var : integer := 10;
                 new_var := new_var / 5;
             end.
@@ -824,7 +824,7 @@ class WorkingGrammarTestCase(TestCase):
         tree = sa.parse(lexer.tokens)
 
         sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse(tree.root)
+        sem_an.parse()
 
     def test_int_convert_to_real(self):
         self.check_fails("""
@@ -987,7 +987,7 @@ class WorkingGrammarTestCase(TestCase):
         tree = sa.parse(lexer.tokens)
 
         sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse(tree.root)
+        sem_an.parse()
 
     def test_scopes(self):
         self.check_not_fails("""
@@ -1066,13 +1066,13 @@ class WorkingGrammarTestCase(TestCase):
                         var n: integer := 5;
                     end;
                     n := 10;
-                end;   
+                end;
             end.
         """)
 
         self.check_fails("""
             var a: integer := 10;
-            begin 
+            begin
                 var a: integer := 20;
             end.
         """)
@@ -1118,7 +1118,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
         sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse(tree.root)
+        sem_an.parse()
 
     def test_for_loop_semantic(self):
         self.check_fails("""
@@ -1271,16 +1271,15 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        # Должен фейлиться - i обьявлена дважды
-        # self.check_not_fails("""
-        #     begin
-        #         for var i: integer := 1 to 10 do
-        #         begin
-        #             for var i: integer := 1 to 10 do
-        #                 print(i);
-        #         end;
-        #     end.
-        # """)
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    for var i: integer := 1 to 10 do
+                        print(i);
+                end;
+            end.
+        """)
 
         # SyntaxError
         # self.check_not_fails("""
@@ -1303,6 +1302,18 @@ class WorkingGrammarTestCase(TestCase):
         # """)
 
     def test_if_semantic(self):
+        self.check_not_fails("""
+            begin
+                if true then
+                begin
+                end
+                else if 1 > 1 then
+                    print(1)
+                else
+                    print(2);
+            end.
+        """)
+
         self.check_not_fails("""
             begin
                 if (5 > 4) then
@@ -1402,7 +1413,7 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        self.check_not_fails("""
+        self.check_fails("""
             begin
                 if (true > 15) then
                 begin
@@ -1638,28 +1649,28 @@ class WorkingGrammarTestCase(TestCase):
             begin
                 var a: boolean := false;
                 var b: boolean := false;
-                
+
                 var c: integer := 10;
                 var d: integer := 15;
 
                 while a do
                     print();
-                    
+
                 while a and b do
                     print();
-                    
+
                 while true do
                     print();
-                    
+
                 while true and b do
                     print();
-                    
+
                 while c = d do
                     print();
-                    
+
                 while c = d and a do
                     print();
-                
+
             end.
         """)
 
@@ -1667,7 +1678,7 @@ class WorkingGrammarTestCase(TestCase):
             begin
                 var a: boolean := false;
                 var b: boolean := false;
-                
+
                 var c: integer := 10;
                 var d: integer := 15;
 
@@ -1694,13 +1705,13 @@ class WorkingGrammarTestCase(TestCase):
                     print();
                     print();
                 end;
-                
+
                 while c = d do
                 begin
                     print();
                     print();
                 end;
-                    
+
                 while c = d and a do
                 begin
                     print();
@@ -1732,10 +1743,10 @@ class WorkingGrammarTestCase(TestCase):
             begin
                 while true do
                 begin
-                    while false do 
+                    while false do
                         print();
                     print();
-                    print();                
+                    print();
                 end;
             end.
         """)
@@ -1749,7 +1760,7 @@ class WorkingGrammarTestCase(TestCase):
                     begin
                         print();
                     end;
-                    
+
                     var a: integer := 10;
                 end;
             end.
@@ -1805,20 +1816,6 @@ class WorkingGrammarTestCase(TestCase):
 
         self.check_fails("""
             begin
-                while 'c' do
-                    print();
-            end.
-        """)
-
-        self.check_fails("""
-            begin
-                while 'c' do
-                    print();
-            end.
-        """)
-
-        self.check_fails("""
-            begin
                 while true do
                 begin
                     while 'asd' do
@@ -1827,9 +1824,10 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+        # Semantic Error not raised - ошибка с экспрешенами
         self.check_fails("""
             begin
-                while sqrt(2) do
+                while 3 and true do
                     print();
             end.
         """)
@@ -1837,16 +1835,8 @@ class WorkingGrammarTestCase(TestCase):
         # Semantic Error not raised - ошибка с экспрешенами
         # self.check_fails("""
         #     begin
-        #         while 3 and true do
-        #             print();
-        #     end.
-        # """)
-
-        # Semantic Error not raised - ошибка с экспрешенами
-        # self.check_fails("""
-        #     begin
         #         var a: integer := 1;
-        #
+
         #         while a = (2 and true) do
         #             print();
         #     end.

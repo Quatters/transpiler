@@ -8,10 +8,10 @@ begin
 
 var int_var: integer := 0;
 
-var1 -= 1;
-var1 *= 1;
-var1 += int_var + 1;
-var2 /= 0.5;
+var1 := 1;
+var1 := 1;
+var1 := int_var + 1;
+var2 := 0.5;
 
 if var1 > 1 then
     println('var1 > 1');
@@ -23,7 +23,7 @@ end;
 
 if (false) then
     print('false')
-else print('else');
+else print('else1');
 
 if (var3 = 'a') then
 begin
@@ -37,23 +37,23 @@ else print('unknown');
 
 for var i: integer := 1 to 3 do
 begin
-    var1 += 1;
+    var1 := 1;
     var3 := 'a';
 end;
 
 for var j: integer := 3 downto 1 do
-    var1 -= 1;
+    var1 := 1;
 
 while var1 <= 1 do
-    var1 *= 1;
+    var1 := 1;
 
 repeat
-    var1 += 1;
+    var1 := 1;
 until true;
 
 var1 := abs(-1);
 var var_sqr: integer := sqr(+2);
 var var_sqrt: real := sqrt(4.0);
-var var_exp: real := exp(2);
+var var_exp: real := exp(-2);
 
 end.

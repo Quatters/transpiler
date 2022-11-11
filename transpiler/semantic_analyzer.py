@@ -29,7 +29,7 @@ class SemanticError(TranspilerError):
     pass
 
 
-class AnyComparableMock:
+class PascalAnyComparable:
     def __init__(self, *args):
         pass
 
@@ -50,6 +50,120 @@ class AnyComparableMock:
 
     def __ne__(self, *args):
         return True
+
+
+class PascalEntity:
+    def __bool__(self):
+        raise TypeError
+
+
+class PascalNumber(PascalEntity):
+    def __add__(self, other):
+        if not isinstance(other, (PascalAnyComparable, PascalNumber)):
+            raise TypeError
+        return PascalNumber()
+
+    def __sub__(self, other):
+        if not isinstance(other, (PascalAnyComparable, PascalNumber)):
+            raise TypeError
+        return PascalNumber()
+
+    def __mul__(self, other):
+        if not isinstance(other, (PascalAnyComparable, PascalNumber)):
+            raise TypeError
+        return PascalNumber()
+
+    def __truediv__(self, other):
+        if not isinstance(other, (PascalAnyComparable, PascalNumber)):
+            raise TypeError
+        return PascalNumber()
+
+    def __eq__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalNumber)):
+            return True
+        raise TypeError
+
+    def __lt__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalNumber)):
+            return True
+        raise TypeError
+
+    def __gt__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalNumber)):
+            return True
+        raise TypeError
+
+    def __le__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalNumber)):
+            return True
+        raise TypeError
+
+    def __ge__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalNumber)):
+            return True
+        raise TypeError
+
+    def __ne__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalNumber)):
+            return True
+        raise TypeError
+
+
+class PascalInt(PascalNumber):
+    pass
+
+
+class PascalReal(PascalNumber):
+    pass
+
+
+class PascalString(PascalEntity):
+    def __add__(self, other):
+        if not isinstance(other, (PascalAnyComparable, PascalString)):
+            raise TypeError
+
+    def __sub__(self, other):
+        raise TypeError
+
+    def __mul__(self, other):
+        raise TypeError
+
+    def __truediv__(self, other):
+        raise TypeError
+
+    def __eq__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalString)):
+            return True
+        raise TypeError
+
+    def __lt__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalString)):
+            return True
+        raise TypeError
+
+    def __gt__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalString)):
+            return True
+        raise TypeError
+
+    def __le__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalString)):
+            return True
+        raise TypeError
+
+    def __ge__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalString)):
+            return True
+        raise TypeError
+
+    def __ne__(self, other, *args):
+        if isinstance(other, (PascalAnyComparable, PascalString)):
+            return True
+        raise TypeError
+
+
+class PascalChar(PascalString):
+    pass
 
 
 class BaseType(ABC):
@@ -195,8 +309,14 @@ class BooleanType(BaseType):
 
         def parse_node(node: Node):
             if node.tag is Tag.QUOTE:
+                if cls.is_string:
+                    value = 'PascalString()'
+                else:
+                    value = ''
                 cls.is_string = not cls.is_string
-                return '"'
+                return value
+            if cls.is_string:
+                return ''
             if node.tag in [Tag.BOOLEAN_VALUE]:
                 return 'True'
             if node.tag is Tag.ID and not cls.is_string:
@@ -205,25 +325,28 @@ class BooleanType(BaseType):
                     if var_type is VarType.BOOLEAN:
                         return 'True'
                     elif var_type is VarType.INTEGER:
-                        return '1'
+                        return 'PascalInt()'
                     elif var_type is VarType.REAL:
-                        return '1.0'
+                        return 'PascalReal()'
                     elif var_type is VarType.STRING:
-                        return '"string"'
+                        return 'PascalString()'
                     elif var_type is VarType.CHAR:
-                        return '"a"'
-                return('AnyComparableMock')
+                        return 'PascalChar()'
+                return 'PascalAnyComparable'
             if node.tag is Tag.NUMBER_INT:
-                return '1'
+                return 'PascalInt()'
             if node.tag is Tag.NUMBER_FLOAT:
-                return '1.0'
+                return 'PascalReal()'
             if node.token.value == '=':
                 return '=='
             if node.token.value == '<>':
                 return '!='
             return node.token.value
 
-        error_data = cls.get_error_data(cls.expr[0], VarType.BOOLEAN)
+        error_data = {
+            'node': cls.expr[0],
+            'message': 'expression is not compatible with type boolean'
+        }
         try:
             str_expr = ' '.join(map(parse_node, cls.expr))
             internal_vars = {}
@@ -246,9 +369,9 @@ class SemanticAnalyzer:
         self.vars_dict = {self.current_scope: {}}
         self.__is_in_string = False
 
-    def parse(self, root: Node):
+    def parse(self):
         try:
-            self.dfs(root, callback=self.perform_assertions)
+            self.dfs(self.tree.root, callback=self.perform_assertions)
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
@@ -294,11 +417,12 @@ class SemanticAnalyzer:
 
         elif node.tag is Tag.ELSE:
             self.vars_dict[self.current_scope] = {}
-            child_else_block = siblings[2]
-            assert not child_else_block.children, {
-                'node': child_else_block.children[0],
-                'message': 'multiple else blocks are not allowed'
-            }
+            if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
+                child_else_block = siblings[2]
+                assert not child_else_block.children, {
+                    'node': child_else_block.children[0],
+                    'message': 'multiple else blocks are not allowed'
+                }
 
         elif node.tag is NT.CALL_ARGS:
             self.check_call_args_for_vars(node)
@@ -329,7 +453,7 @@ class SemanticAnalyzer:
             if (manipulate_var_node := abstract_statement_right_node.children[0]).tag is NT.MANIPULATE_VAR:
                 assign_node = manipulate_var_node.children[0].children[0]
                 if assign_node.tag is not Tag.ASSIGN:
-                    raise NotImplementedError('operational assignments are not yet implemented')
+                    raise NotImplementedError(f'operational assignments are not yet implemented ({self.filepath}:{assign_node.token.line})')
                 assert_func = self._assert_type_of_abstract_statement
         elif node.tag is NT.DEFINE_INLINE_VAR:
             assert_func = self._assert_type_of_inline_define_var
@@ -443,7 +567,7 @@ class SemanticAnalyzer:
             self.get_var_type(node_id)
             raise AssertionError({
                 "node": node_id,
-                "message": "variable is defined"
+                "message": "variable is already defined"
             })
         except ValueError:
             pass
