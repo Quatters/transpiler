@@ -8,4 +8,4 @@
  - Build Engineer - Кореньков Владислав
  - Technical Writer - Аликаева Алиса
 
-![img.png](img.png)
+![img.png](project_plan_img.png)
