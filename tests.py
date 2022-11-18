@@ -11,11 +11,12 @@ from transpiler.base import (
 )
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import GrammarError, SyntaxAnalyzer
-from transpiler.semantic_analyzer import SemanticAnalyzer, SemanticError, TranspilerError
+from transpiler.semantic_analyzer import SemanticAnalyzer, SemanticError
 from transpiler import settings
 
 
 logger = logging.getLogger(__name__)
+
 
 class NonTerm(NonTerminal):
     DESCR = 'DESCR'
@@ -654,14 +655,14 @@ class WorkingGrammarTestCase(TestCase):
     def get_code_generator(self):
         raise NotImplementedError
 
-    def check_not_fails(self, code, err: Exception = SemanticError):
+    def check_not_fails(self, code):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
         sem_an = self.get_semantic_analyzer(tree)
         sem_an.parse()
 
-    def check_fails(self, code, err: Exception = SemanticError):
+    def check_fails(self, code, err=SemanticError):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
@@ -672,7 +673,7 @@ class WorkingGrammarTestCase(TestCase):
 
         logger.info(f"Raised {error.exception}")
 
-    def test_expressions(self):
+    def test_expressions_syntax(self):
         code = """
             var a: integer := (1 * 2 - 4) * 5 / 7 - 8;
             begin
@@ -683,7 +684,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_for_loop(self):
+    def test_for_loop_syntax(self):
         code = """
             begin
                 for var i: integer := 1 to 3 do
@@ -709,7 +710,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_while_loop(self):
+    def test_while_loop_syntax(self):
         code = """
             begin
                 while 1 <= 2 do
@@ -725,7 +726,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_repeat_loop(self):
+    def test_repeat_loop_syntax(self):
         code = """
             begin
                 var a: integer := 1;
@@ -777,8 +778,8 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_types(self):
-        code = """
+    def test_types_semantic(self):
+        self.check_not_fails("""
             begin
                 var a: integer := 10;
                 var b: integer := a;
@@ -817,30 +818,9 @@ class WorkingGrammarTestCase(TestCase):
                 var new_var : integer := 10;
                 new_var := new_var / 5;
             end.
-        """
-
-        lexer = self.get_lexer(code)
-        sa = self.get_syntax_analyzer()
-        tree = sa.parse(lexer.tokens)
-
-        sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse()
-
-    def test_int_convert_to_real(self):
-        self.check_fails("""
-            begin
-                var c: real := 10.0;
-                var a: real := 10;
-                var b: integer := c;
-            end.
         """)
 
-        self.check_fails("""
-            begin
-                a := 10;
-            end.
-        """)
-
+    def test_reassignment_semantic(self):
         self.check_fails("""
             begin
                 var a: integer := 10;
@@ -862,6 +842,14 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+    def test_convert_vars_semantic(self):
+        self.check_fails("""
+            begin
+                var c: real := 10.0;
+                var b: integer := c;
+            end.
+        """)
+
         self.check_fails("""
             begin
                 var a: integer := 15;
@@ -878,18 +866,6 @@ class WorkingGrammarTestCase(TestCase):
         self.check_fails("""
             begin
                 var b: string := 10;
-            end.
-        """)
-
-        self.check_fails("""
-            begin
-                var a: boolean := true + false;
-            end.
-        """)
-
-        self.check_fails("""
-            begin
-                var t3: boolean := true and false or t1 + true;
             end.
         """)
 
@@ -938,6 +914,12 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+        self.check_fails("""
+            begin
+                var a: boolean := true + false;
+            end.
+        """)
+
     def test_string(self):
         self.check_fails("""
             begin
@@ -976,20 +958,25 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
     def test_compare(self):
-        code = """
+        self.check_not_fails("""
             begin
                 var k: boolean := 1 + 2 = 3;
             end.
-        """
-
-        lexer = self.get_lexer(code)
-        sa = self.get_syntax_analyzer()
-        tree = sa.parse(lexer.tokens)
-
-        sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse()
+        """)
 
     def test_scopes(self):
+        self.check_fails("""
+             begin
+                 a := 10;
+             end.
+         """)
+
+        self.check_fails("""
+            begin
+                var t3: boolean := true and false or t1 + true;
+            end.
+        """)
+
         self.check_not_fails("""
             var global1: integer := 1;
             var global2: real := 2.0;
@@ -1097,7 +1084,7 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
     def test_call_functions(self):
-        code = """
+        self.check_not_fails("""
             begin
                 print('some text');
 
@@ -1106,19 +1093,17 @@ class WorkingGrammarTestCase(TestCase):
                 var b: integer := func1(func2(1), 1);
                 var c: integer := func1(func2(func3(func4())));
                 var d: integer := func1(func2(func3(c, b))) + func1();
-                var e: integer := func1(func2(func3(func4(5, sqrt(8))), sqrt(2))) + func1(func2(func3(c, b))) + func1();
+                var e: integer :=
+                    func1(func2(func3(func4(5, sqrt(8))), sqrt(2)))
+                    + func1(func2(func3(c, b))) + func1();
 
                 var lol: boolean := 1.2 > sqrt(2);
                 var lol2: boolean := sqrt(1) > sqrt(2);
                 var lol3: boolean := '__lol__' < 'kek';
-                var lol4: boolean := '' <> '' or '' >= '' or '' <= '' or '' > '' or '' = '';
+                var lol4: boolean := '' <> '' or '' >= '' or
+                    '' <= '' or '' > '' or '' = '';
             end.
-        """
-        lexer = self.get_lexer(code)
-        sa = self.get_syntax_analyzer()
-        tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
-        sem_an.parse()
+        """)
 
     def test_for_loop_semantic(self):
         self.check_fails("""
@@ -1280,26 +1265,6 @@ class WorkingGrammarTestCase(TestCase):
                 end;
             end.
         """)
-
-        # SyntaxError
-        # self.check_not_fails("""
-        #     begin
-        #         for var i: integer := 1 to 10 do
-        #             for var j: integer := 1 to 10 do
-        #             begin
-        #                 print(i);
-        #             end;
-        #     end.
-        # """)
-
-        # SyntaxError
-        # self.check_not_fails("""
-        #     begin
-        #         for var i: integer := 1 to 10 do
-        #             for var j: integer := 1 to 10 do
-        #                 i := 10;
-        #     end.
-        # """)
 
     def test_if_semantic(self):
         self.check_not_fails("""
@@ -1465,28 +1430,6 @@ class WorkingGrammarTestCase(TestCase):
                     print(1);
             end.
         """)
-
-        # Syntax Error
-        # self.check_not_fails("""
-        #     begin
-        #         if true then
-        #             if true then
-        #                 print();
-        #     end.
-        # """)
-
-        # Надо починить ошибку выше и потестить еще код ниже
-        #         begin
-        #         if true then
-        #         if true then
-        #         print(1)
-        #
-        #     else
-        #     print(1)
-        #
-        # else
-        # print(2);
-        # end.
 
     def test_until_loop_semantic(self):
         self.check_not_fails("""
@@ -1730,15 +1673,6 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        # Syntax Error
-        # self.check_not_fails("""
-        #     begin
-        #         while true do
-        #             while not false do
-        #                 print();
-        #     end.
-        # """)
-
         self.check_not_fails("""
             begin
                 while true do
@@ -1765,15 +1699,6 @@ class WorkingGrammarTestCase(TestCase):
                 end;
             end.
         """)
-
-        #Syntax Error
-        # self.check_not_fails("""
-        #     begin
-        #         while true do
-        #             if true then
-        #                 print();
-        #     end.
-        # """)
 
         self.check_fails("""
             begin
@@ -1824,7 +1749,6 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        # Semantic Error not raised - ошибка с экспрешенами
         self.check_fails("""
             begin
                 while 3 and true do
@@ -1832,15 +1756,70 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-        # Semantic Error not raised - ошибка с экспрешенами
-        # self.check_fails("""
-        #     begin
-        #         var a: integer := 1;
+        self.check_fails("""
+            begin
+                var a: integer := 1;
 
-        #         while a = (2 and true) do
-        #             print();
-        #     end.
-        # """)
+                while a = (2 and true) do
+                    print();
+            end.
+        """)
+
+    def test_key_words_in_string_semantic(self):
+        self.check_not_fails("""
+            begin
+                if true then
+                    print()
+                else
+                    print('else');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if true then
+                    print()
+                else
+                    var str: string := 'else';
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var s: string := 'else';
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                print('str');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                print('for');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                print('var');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    print('for');
+                    if true then
+                        var a: string := 'if'
+                    else
+                        print('else');
+                end;
+            end.
+        """)
 
     def test_operational_assignments(self):
 

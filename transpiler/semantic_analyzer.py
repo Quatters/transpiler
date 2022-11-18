@@ -171,7 +171,9 @@ class BaseType(ABC):
     def get_error_data(node: Node, expected_type: str):
         return {
             'node': node,
-            'message': f'{node.token.value} is not compatible with type {expected_type}'
+            'message':
+                f'{node.token.value} '
+                f'is not compatible with type {expected_type}'
         }
 
     @classmethod
@@ -230,9 +232,10 @@ class IntType(BaseType):
             Tag.COMMA,
         ]
         assert node.tag in acceptable \
-            or node.tag is Tag.ID and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER]) \
+            or node.tag is Tag.ID \
+            and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER]) \
             or node.tag is Tag.ID and not cls.is_var(node), \
-                cls.get_error_data(node, VarType.INTEGER)
+            cls.get_error_data(node, VarType.INTEGER)
 
 
 class RealType(BaseType):
@@ -247,9 +250,11 @@ class RealType(BaseType):
             Tag.COMMA,
         ]
         assert node.tag in acceptable \
-            or (node.tag is Tag.ID and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER, VarType.REAL])) \
+            or node.tag is Tag.ID \
+            and cls.is_var(node) \
+            and cls.is_type(node, [VarType.INTEGER, VarType.REAL]) \
             or node.tag is Tag.ID and not cls.is_var(node), \
-                cls.get_error_data(node, VarType.REAL)
+            cls.get_error_data(node, VarType.REAL)
 
 
 class CharType(BaseType):
@@ -261,10 +266,12 @@ class CharType(BaseType):
         if expr[0].tag is Tag.ID:
             assert cls.is_type(expr[0], [VarType.CHAR]) \
                 or not cls.is_var(expr[0]), \
-                    cls.get_error_data(expr[0], VarType.CHAR)
+                cls.get_error_data(expr[0], VarType.CHAR)
         else:
-            assert expr[0].tag == Tag.QUOTE, cls.get_error_data(expr[0], VarType.CHAR)
-            assert expr[-1].tag == Tag.QUOTE, cls.get_error_data(expr[0], VarType.CHAR)
+            assert expr[0].tag == Tag.QUOTE, \
+                cls.get_error_data(expr[0], VarType.CHAR)
+            assert expr[-1].tag == Tag.QUOTE, \
+                cls.get_error_data(expr[0], VarType.CHAR)
             assert len(expr) > 2 and len(expr[1].token.value) == 1, {
                 'node': expr[1],
                 'message': 'invalid char, ensure value length is strictly 1'
@@ -283,9 +290,12 @@ class StringType(BaseType):
             cls.is_string = not cls.is_string
         elif not cls.is_string:
             assert (node.token.value == "+") \
-                or (node.tag == Tag.ID and cls.is_var(node) and cls.is_type(node, [VarType.CHAR, VarType.STRING])) \
+                or node.tag == Tag.ID \
+                and cls.is_var(node) \
+                and cls.is_type(node, [VarType.CHAR, VarType.STRING]) \
                 or (node.tag is Tag.ID and not cls.is_var(node)), \
-                    cls.get_error_data(node, VarType.STRING)
+                cls.get_error_data(node, VarType.STRING)
+
 
 class BooleanType(BaseType):
     @classmethod
@@ -295,7 +305,7 @@ class BooleanType(BaseType):
         if not cls.is_string and node.tag is Tag.ID:
             assert not cls.is_var(node) \
                 or cls.is_defined(node), \
-                    cls.get_error_data(node, VarType.BOOLEAN)
+                cls.get_error_data(node, VarType.BOOLEAN)
 
     @classmethod
     def assert_(cls, expr: list[Node], vars_dict: dict, current_scope: int):
@@ -369,13 +379,16 @@ class SemanticAnalyzer:
         self.vars_dict = {self.current_scope: {}}
         self.__is_in_string = False
 
+        self.__is_in_string_new = False
+
     def parse(self):
         try:
             self.dfs(self.tree.root, callback=self.perform_assertions)
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
-                raise ValueError(f'got unexpected non-terminal token: {node.tag}')
+                raise \
+                    ValueError(f'got unexpected non-terminal token: {node.tag}')
             msg = f"{node.token.value} at line {node.token.line}"
             additional_msg = error.args[0]["message"]
             msg += f' - {additional_msg}'
@@ -399,45 +412,58 @@ class SemanticAnalyzer:
             if child not in self._visited_nodes[callback_name]:
                 self.dfs(child, node.children, callback)
 
-    def perform_assertions(self, node: Node, siblings: list[Node] = None):
-        if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
-            self.vars_dict[self.current_scope] = {}
-            self.current_scope -= 1
-        elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
-            self.current_scope += 1
-            if node.tag is Tag.IF:
-                abstract_expr_node = siblings[1].children[0]
-            elif node.tag is Tag.REPEAT:
-                abstract_expr_node = siblings[3]
-            elif node.tag is Tag.WHILE:
-                abstract_expr_node = siblings[1]
+    def perform_assertions(self, node: Node, siblings: list[Node] | None):
 
-            if node.tag is not Tag.FOR:
-                self.assert_type_of_expression(abstract_expr_node)
+        if node.tag is Tag.QUOTE:
+            self.__is_in_string_new = not self.__is_in_string_new
+        elif not self.__is_in_string_new:
 
-        elif node.tag is Tag.ELSE:
-            self.vars_dict[self.current_scope] = {}
-            if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
-                child_else_block = siblings[2]
-                assert not child_else_block.children, {
-                    'node': child_else_block.children[0],
-                    'message': 'multiple else blocks are not allowed'
-                }
+            if node.tag is Tag.SEMICOLON \
+                    and siblings[0].tag \
+                    in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
+                self.vars_dict[self.current_scope] = {}
+                self.current_scope -= 1
+            elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
+                self.current_scope += 1
+                if node.tag is Tag.IF:
+                    abstract_expr_node = siblings[1].children[0]
+                elif node.tag is Tag.REPEAT:
+                    abstract_expr_node = siblings[3]
+                elif node.tag is Tag.WHILE:
+                    abstract_expr_node = siblings[1]
 
-        elif node.tag is NT.CALL_ARGS:
-            self.check_call_args_for_vars(node)
-        elif node.tag in [NT.DEFINE_VAR, NT.DEFINE_VAR_WITHOUT_SEMICOLON, NT.ABSTRACT_STATEMENT, NT.DEFINE_INLINE_VAR]:
-            self.assert_type_of_expression(node)
+                if node.tag is not Tag.FOR:
+                    self.assert_type_of_expression(abstract_expr_node)
+
+            elif node.tag is Tag.ELSE and not self.__is_in_string:
+                self.vars_dict[self.current_scope] = {}
+                if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
+                    child_else_block = siblings[2]
+                    assert not child_else_block.children, {
+                        'node': child_else_block.children[0],
+                        'message': 'multiple else blocks are not allowed'
+                    }
+
+            elif node.tag is NT.CALL_ARGS:
+                self.check_call_args_for_vars(node)
+            elif node.tag in [NT.DEFINE_VAR,
+                              NT.DEFINE_VAR_WITHOUT_SEMICOLON,
+                              NT.ABSTRACT_STATEMENT,
+                              NT.DEFINE_INLINE_VAR]:
+                self.assert_type_of_expression(node)
 
     def check_call_args_for_vars(self, call_args_node: Node):
         if call_args_node.children:
             abstract_expr_node = call_args_node.children[0]
-            self.dfs(abstract_expr_node, callback=self._perform_call_args_assertions)
+            self.dfs(abstract_expr_node,
+                     callback=self._perform_call_args_assertions)
 
     def _perform_call_args_assertions(self, node: Node, siblings: list[Node]):
         if node.tag is Tag.QUOTE:
             self.__is_in_string = not self.__is_in_string
-        elif not self.__is_in_string and node.tag is Tag.ID and not self._is_func_call(node):
+        elif not self.__is_in_string \
+                and node.tag is Tag.ID \
+                and not self._is_func_call(node):
             self.assert_var_is_defined(node)
         elif node.tag is NT.CALL_ARGS:
             self.check_call_args_for_vars(node)
@@ -450,10 +476,16 @@ class SemanticAnalyzer:
             assert_func = self._assert_type_of_define_var
         elif node.tag is NT.ABSTRACT_STATEMENT:
             abstract_statement_right_node: Node = node.children[1]
-            if (manipulate_var_node := abstract_statement_right_node.children[0]).tag is NT.MANIPULATE_VAR:
+            if (manipulate_var_node :=
+                abstract_statement_right_node.children[0]).tag \
+                    is NT.MANIPULATE_VAR:
                 assign_node = manipulate_var_node.children[0].children[0]
                 if assign_node.tag is not Tag.ASSIGN:
-                    raise NotImplementedError(f'operational assignments are not yet implemented ({self.filepath}:{assign_node.token.line})')
+                    raise \
+                        NotImplementedError(f'operational assignments '
+                                            f'are not yet implemented '
+                                            f'({self.filepath}:'
+                                            f'{assign_node.token.line})')
                 assert_func = self._assert_type_of_abstract_statement
         elif node.tag is NT.DEFINE_INLINE_VAR:
             assert_func = self._assert_type_of_inline_define_var
@@ -464,7 +496,9 @@ class SemanticAnalyzer:
         if assert_func is not None:
             assert_func(node, **kwargs)
 
-    def _assert_abstract_expr_type(self, abstract_expr_node: Node, type: VarType):
+    def _assert_abstract_expr_type(self,
+                                   abstract_expr_node: Node,
+                                   type: VarType):
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
         self.dfs(abstract_expr_node, callback=self._collect_right_terminals)
@@ -478,7 +512,8 @@ class SemanticAnalyzer:
         optional_define_var_assignment_node = node.children[4]
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
-        self.dfs(optional_define_var_assignment_node, callback=self._collect_right_terminals)
+        self.dfs(optional_define_var_assignment_node,
+                 callback=self._collect_right_terminals)
 
         self.assert_expr_type(left_var)
 
@@ -486,7 +521,8 @@ class SemanticAnalyzer:
         left_var = node.children[1]
         self.assert_var_is_not_defined(left_var)
         node_type = node.children[3].token.value
-        assert VarType.from_str(node_type) not in [VarType.REAL, VarType.STRING], {
+        assert VarType.from_str(node_type) in \
+               [VarType.INTEGER, VarType.CHAR, VarType.BOOLEAN], {
             "node": left_var,
             "message": "iterator of for loop must be integer, char or boolean"
         }
@@ -495,7 +531,8 @@ class SemanticAnalyzer:
         define_var_assignment_node = node.children[4]
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
-        self.dfs(define_var_assignment_node, callback=self._collect_right_terminals)
+        self.dfs(define_var_assignment_node,
+                 callback=self._collect_right_terminals)
 
         self.assert_expr_type(left_var)
 
@@ -513,7 +550,8 @@ class SemanticAnalyzer:
 
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
-        self.dfs(abstract_statement_node, callback=self._collect_right_terminals)
+        self.dfs(abstract_statement_node,
+                 callback=self._collect_right_terminals)
 
         self.assert_expr_type(left_var)
 
@@ -528,7 +566,8 @@ class SemanticAnalyzer:
         if isinstance(node.tag, Tag) and node.tag is not Tag.ASSIGN:
             self.right_terminals.append(node)
             if node.tag is Tag.ID \
-                    and not (len(siblings) > 1 and siblings[1].tag is NT.STRING_PART):
+                    and not (len(siblings) > 1 and
+                             siblings[1].tag is NT.STRING_PART):
                 if not self._is_func_call(node):
                     self.assert_var_is_defined(node)
 
@@ -541,15 +580,20 @@ class SemanticAnalyzer:
     def assert_expr_type(self, node: Node, var_type: VarType = None):
         var_type = var_type or self.get_var_type(node)
         if var_type == VarType.INTEGER:
-            IntType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+            IntType.assert_(self.right_terminals,
+                            self.vars_dict, self.current_scope)
         elif var_type == VarType.REAL:
-            RealType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+            RealType.assert_(self.right_terminals,
+                             self.vars_dict, self.current_scope)
         elif var_type == VarType.CHAR:
-            CharType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+            CharType.assert_(self.right_terminals,
+                             self.vars_dict, self.current_scope)
         elif var_type == VarType.STRING:
-            StringType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+            StringType.assert_(self.right_terminals,
+                               self.vars_dict, self.current_scope)
         elif var_type == VarType.BOOLEAN:
-            BooleanType.assert_(self.right_terminals, self.vars_dict, self.current_scope)
+            BooleanType.assert_(self.right_terminals,
+                                self.vars_dict, self.current_scope)
         else:
             raise ValueError(f'unknown type: {var_type}')
 
@@ -572,12 +616,6 @@ class SemanticAnalyzer:
         except ValueError:
             pass
 
-    def is_left(self, node_cur: Node, children: list[Node]) -> bool:
-        if [child for child in children if child.tag == NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT]:
-            return True
-
-        return False
-
     def save_var(self, node, type):
         scoped_vars = self.vars_dict.get(self.current_scope, {})
         scoped_vars[node.token.value] = {'type': VarType.from_str(type)}
@@ -594,92 +632,3 @@ class SemanticAnalyzer:
             else:
                 return var_data["type"]
         raise ValueError(f'variable is not defined: {node.token.value}')
-
-
-"""
-    while, until
-    несколько else
-    тесты на if
-
-    ТЕСТИКИ
-        если все норм, то делаем сравнения
-
-        Проверка на то чтобы внутри кавычек ничего не обрабатывалось
-
-        Если в выражении есть деление, то оно будет real
-
-      По умолчанию интовые переменные имеют значение 0
-
-      d - оказывается в values для себя самого
-      var d: integer := 10;
-      d := 15;
-
-                этот код рабочий
-                var a: integer;
-                var b: integer := a + (20 - 2) * 6;
-
-                undefined vars
-
-
-Значения по умолчанию:
-    int 0
-    real 0
-    bool false
-    char ничего
-    string ничего
-
-
-True or False - строка или бул вар
-
-преобразование CST в AST
-в AST отсутствуют вспомогательные конструкции(скобки, комментарии)
-
-надо реализовать обход дерева
-
-таблица символов(туда будут попадать все переменные)
-(var(здесь может быть токен со всей инфой), value)
-строится для каждой области видимости
-В ходе анализа таблицы символов складываются в стек, а после выхода из области видимости удаляются из него.
-
-vars
-неопределенные переменные
-повторное объявление идентификатора
-доступ к переменной вне области
-
-! количество параметров в функции или процедуре
-
-
-types
-приведение типов
-операции с разными типами
-
-int <- int
-   real <- int
-char !- int
-string !- int
-bool !- int
-
-int !- real
-real <- real
-char !- real
-string !- real
-bool !- real
-
-int !- char
-real !- char
-char <- char
-  string <- char
-bool !- char
-
-int !- string
-real !- string
-char !- string
-string <- string
-bool !- string
-
-int !- bool
-real !- bool
-char !- bool
-string !- bool
-bool <- bool
-"""
