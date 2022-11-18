@@ -46,7 +46,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;На вход поступает код программы на языке Pascal. На выходе получаем множество токенов, иначе, если анализатор обнаружил ошибки, то программа уведомляет об этом.  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Структура токена представлена на Рис. 1.  
 <p align="center">
-<img width="200" src="img_1.png"><br>
+<img width="200" src="software_requirements_img.png"><br>
 Рис. 1
 </p>
 
