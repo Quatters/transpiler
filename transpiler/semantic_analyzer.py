@@ -379,7 +379,7 @@ class SemanticAnalyzer:
         self.vars_dict = {self.current_scope: {}}
         self.__is_in_string = False
 
-        self.__is_in_string_new = False
+        self.__is_in_string_perform_assertions = False
 
     def parse(self):
         try:
@@ -415,8 +415,9 @@ class SemanticAnalyzer:
     def perform_assertions(self, node: Node, siblings: list[Node] | None):
 
         if node.tag is Tag.QUOTE:
-            self.__is_in_string_new = not self.__is_in_string_new
-        elif not self.__is_in_string_new:
+            self.__is_in_string_perform_assertions = \
+                not self.__is_in_string_perform_assertions
+        elif not self.__is_in_string_perform_assertions:
 
             if node.tag is Tag.SEMICOLON \
                     and siblings[0].tag \
