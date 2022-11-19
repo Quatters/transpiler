@@ -816,7 +816,7 @@ class WorkingGrammarTestCase(TestCase):
                 var lol: boolean := ((1 + 2) * 3 > 4) and not (k or FALSE);
 
                 var new_var : integer := 10;
-                new_var := new_var / 5;
+                new_var := new_var * 5;
             end.
         """)
 
@@ -921,6 +921,31 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
     def test_string(self):
+
+        self.check_not_fails("""
+            begin
+                var s: string := 'asd' + 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' - 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' / 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' * 'dsa';
+            end.
+        """)
+
         self.check_fails("""
             begin
                 var b: string := 10;
@@ -1818,6 +1843,19 @@ class WorkingGrammarTestCase(TestCase):
                     else
                         print('else');
                 end;
+            end.
+        """)
+
+    def test_division(self):
+        self.check_fails("""
+            begin
+                var a: integer := 10 / 5;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' / 'sgd';
             end.
         """)
 

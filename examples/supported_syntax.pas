@@ -23,7 +23,7 @@ end;
 
 if (false) then
     print('false')
-else print('else1');
+else print('else');
 
 if (var3 = 'a') then
 begin

@@ -5,6 +5,18 @@ Transpiler from PascalABC.NET to C#.
 ## Known issues
 
 * Comments aren't supported.
+* Operational assignments are not supported.
+
+```pascal
+// ok
+var a: integer := 10;
+a := a + 1;
+
+// not supported
+var a: integer := 10;
+a += 1;
+```
+
 * Type hints in variable definitions are always required:
 
 ```pascal
@@ -13,6 +25,22 @@ var a: char := 'a';
 
 // not supported
 var a := 'a';
+```
+
+* Inline nested `for`, `while` and `if` statements are not supported
+
+```pascal
+// ok
+if true then
+begin 
+    if true then
+        print('str');
+end;
+
+// not supported
+if true then
+    if true then
+        print('str');
 ```
 
 ## Contribute

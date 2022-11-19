@@ -232,6 +232,7 @@ class IntType(BaseType):
             Tag.COMMA,
         ]
         assert node.tag in acceptable \
+            and node.token.value != '/' \
             or node.tag is Tag.ID \
             and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER]) \
             or node.tag is Tag.ID and not cls.is_var(node), \
@@ -360,8 +361,8 @@ class BooleanType(BaseType):
         try:
             str_expr = ' '.join(map(parse_node, cls.expr))
             internal_vars = {}
-            exec(f'__mock_value__ = {str_expr}', globals(), internal_vars)
-            assert isinstance(internal_vars['__mock_value__'], bool), error_data
+            exec(f'exec_result = {str_expr}', globals(), internal_vars)
+            assert isinstance(internal_vars['exec_result'], bool), error_data
         except TypeError:
             raise AssertionError(error_data)
 
@@ -436,7 +437,7 @@ class SemanticAnalyzer:
                 if node.tag is not Tag.FOR:
                     self.assert_type_of_expression(abstract_expr_node)
 
-            elif node.tag is Tag.ELSE and not self.__is_in_string:
+            elif node.tag is Tag.ELSE:
                 self.vars_dict[self.current_scope] = {}
                 if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
                     child_else_block = siblings[2]
