@@ -16,4 +16,4 @@ syntax_analyzer = SyntaxAnalyzer(GRAMMAR_RULES, filepath)
 tree = syntax_analyzer.parse(lexer.tokens)
 
 semantic_analyzer = SemanticAnalyzer(tree, filepath)
-semantic_analyzer.parse()
+semantically_correct_tree = semantic_analyzer.parse()

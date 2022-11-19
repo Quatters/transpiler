@@ -385,6 +385,9 @@ class SemanticAnalyzer:
     def parse(self):
         try:
             self.dfs(self.tree.root, callback=self.perform_assertions)
+            self.tree.is_semantically_correct = True
+            self.tree.vars_dict = self.vars_dict
+            return self.tree
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
