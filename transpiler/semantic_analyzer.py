@@ -1,6 +1,7 @@
 from transpiler.tree import SyntaxTree, Node
 from transpiler.settings import Tag, NT
 from transpiler.base import TranspilerError, TranspilerEnum
+from transpiler.code_generator import CodeGenerator
 from abc import ABC
 
 
@@ -382,6 +383,8 @@ class SemanticAnalyzer:
 
         self.__is_in_string_perform_assertions = False
 
+        self.should_clear_vars_dict = False
+
     def parse(self):
         try:
             self.dfs(self.tree.root, callback=self.perform_assertions)
@@ -426,8 +429,8 @@ class SemanticAnalyzer:
             if node.tag is Tag.SEMICOLON \
                     and siblings[0].tag \
                     in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
-                self.vars_dict[self.current_scope] = {}
-                self.current_scope -= 1
+                # self.vars_dict[self.current_scope] = {}
+                self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
                 self.current_scope += 1
                 if node.tag is Tag.IF:
@@ -441,7 +444,8 @@ class SemanticAnalyzer:
                     self.assert_type_of_expression(abstract_expr_node)
 
             elif node.tag is Tag.ELSE:
-                self.vars_dict[self.current_scope] = {}
+                # self.vars_dict[self.current_scope] = {}
+                self.should_clear_vars_dict = True
                 if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
                     child_else_block = siblings[2]
                     assert not child_else_block.children, {
@@ -456,6 +460,13 @@ class SemanticAnalyzer:
                               NT.ABSTRACT_STATEMENT,
                               NT.DEFINE_INLINE_VAR]:
                 self.assert_type_of_expression(node)
+
+        # self.code_generator.add_token(node, siblings, **self.vars_dict)
+
+        if self.should_clear_vars_dict:
+            self.vars_dict[self.current_scope] = {}
+            self.current_scope -= 1
+            self.should_clear_vars_dict = False
 
     def check_call_args_for_vars(self, call_args_node: Node):
         if call_args_node.children:
