@@ -1,7 +1,6 @@
 from transpiler.tree import SyntaxTree, Node
 from transpiler.settings import Tag, NT
 from transpiler.base import TranspilerError, TranspilerEnum
-from transpiler.code_generator import CodeGenerator
 from abc import ABC
 
 
@@ -385,6 +384,8 @@ class SemanticAnalyzer:
 
         self.should_clear_vars_dict = False
 
+        self.else_flag = False
+
     def parse(self):
         try:
             self.dfs(self.tree.root, callback=self.perform_assertions)
@@ -445,6 +446,7 @@ class SemanticAnalyzer:
 
             elif node.tag is Tag.ELSE:
                 # self.vars_dict[self.current_scope] = {}
+                self.else_flag = True
                 self.should_clear_vars_dict = True
                 if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
                     child_else_block = siblings[2]
@@ -466,6 +468,9 @@ class SemanticAnalyzer:
         if self.should_clear_vars_dict:
             self.vars_dict[self.current_scope] = {}
             self.current_scope -= 1
+            if self.else_flag:
+                self.current_scope += 1
+                self.else_flag = False
             self.should_clear_vars_dict = False
 
     def check_call_args_for_vars(self, call_args_node: Node):
