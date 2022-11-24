@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from transpiler.lexer import Lexer
 from transpiler.syntax_analyzer import SyntaxAnalyzer
+from transpiler.semantic_analyzer import SemanticAnalyzer
 from transpiler.settings import Tag, LEXER_RULES, GRAMMAR_RULES
 
 
@@ -12,4 +13,7 @@ lexer = Lexer(Tag, LEXER_RULES, filepath)
 lexer.buffer = code
 
 syntax_analyzer = SyntaxAnalyzer(GRAMMAR_RULES, filepath)
-syntax_analyzer.parse(lexer.tokens)
+tree = syntax_analyzer.parse(lexer.tokens)
+
+semantic_analyzer = SemanticAnalyzer(tree, filepath)
+semantically_correct_tree = semantic_analyzer.parse()

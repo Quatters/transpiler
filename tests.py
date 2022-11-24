@@ -1,3 +1,4 @@
+import logging
 from unittest import TestCase
 from transpiler.base import (
     Token,
@@ -10,7 +11,11 @@ from transpiler.base import (
 )
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import GrammarError, SyntaxAnalyzer
+from transpiler.semantic_analyzer import SemanticAnalyzer, SemanticError
 from transpiler import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class NonTerm(NonTerminal):
@@ -211,7 +216,7 @@ class LexerTestCase(TestCase):
         lexer.buffer = code
         with self.assertRaises(UnexpectedTokenError) as error:
             list(lexer.tokens)
-        self.assertEqual(str(error.exception), r"'%' at line 2")
+        self.assertEqual(str(error.exception), r"% at line 2")
 
     def test_types(self):
         code = """
@@ -644,13 +649,32 @@ class WorkingGrammarTestCase(TestCase):
         sa = SyntaxAnalyzer(settings.GRAMMAR_RULES, 'dummy.pas')
         return sa
 
-    def get_semantic_analyzer(self):
-        raise NotImplementedError
+    def get_semantic_analyzer(self, tree):
+        return SemanticAnalyzer(tree, "dummy.pas")
 
     def get_code_generator(self):
         raise NotImplementedError
 
-    def test_expressions(self):
+    def check_not_fails(self, code):
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        tree = sem_an.parse()
+        self.assertTrue(tree.is_semantically_correct)
+
+    def check_fails(self, code, err=SemanticError):
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+
+        sem_an = self.get_semantic_analyzer(tree)
+        with self.assertRaises(err) as error:
+            sem_an.parse()
+
+        logger.info(f"Raised {error.exception}")
+
+    def test_expressions_syntax(self):
         code = """
             var a: integer := (1 * 2 - 4) * 5 / 7 - 8;
             begin
@@ -661,7 +685,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_for_loop(self):
+    def test_for_loop_syntax(self):
         code = """
             begin
                 for var i: integer := 1 to 3 do
@@ -687,7 +711,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_while_loop(self):
+    def test_while_loop_syntax(self):
         code = """
             begin
                 while 1 <= 2 do
@@ -703,7 +727,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_repeat_loop(self):
+    def test_repeat_loop_syntax(self):
         code = """
             begin
                 var a: integer := 1;
@@ -717,7 +741,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
 
-    def test_if(self):
+    def test_if_syntax(self):
         code = """
             begin
                 var a: integer := 1;
@@ -754,3 +778,1135 @@ class WorkingGrammarTestCase(TestCase):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         sa.parse(lexer.tokens)
+
+    def test_types_semantic(self):
+        self.check_not_fails("""
+            begin
+                var a: integer := 10;
+                var b: integer := a;
+                var c: integer := a + 10;
+
+                var r: real := 10.10;
+                var r1: real := r;
+                var r2: real := r + 10.20;
+
+                r1 := 10;
+                r := a;
+
+                var expr: integer := a + 100 * ((8 - 200) + (2 * 3)) - b;
+                var expr2: real := a + 100 * ((8 - r) + (2 * 3)) - b;
+
+                var t: boolean := true;
+                var f: boolean := false;
+                t := f;
+                t := not (true and f or false);
+
+                var s: string := 's t r real + false' + 'adsf';
+                var s1: string := s;
+
+                var ch: char := 'a';
+                var ch2: char := ch;
+
+                ch := 'b';
+                ch2 := ch;
+
+                s := '- / + * false true';
+                s1 := s;
+
+                var k: boolean := 1 + 2 = 3;
+                var lol: boolean := ((1 + 2) * 3 > 4) and not (k or FALSE);
+
+                var new_var : integer := 10;
+                new_var := new_var * 5;
+            end.
+        """)
+
+    def test_reassignment_semantic(self):
+        self.check_fails("""
+            begin
+                var a: integer := 10;
+                var a: integer := 15;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer;
+                var a: integer := 15;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 15;
+                var a: integer;
+            end.
+        """)
+
+    def test_convert_vars_semantic(self):
+        self.check_fails("""
+            begin
+                var c: real := 10.0;
+                var b: integer := c;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 15;
+                var b: boolean := a;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := true;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var b: string := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var t: integer := 10 and 8 or 16;
+            end.
+        """)
+
+    def test_boolean_type(self):
+        self.check_fails("""
+            begin
+                var a: boolean := 10 + (1 = 1);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 1 + 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var b: boolean := false;
+                var a: boolean := b and 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := true;
+                a := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := 10 and 1 or 16;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: boolean := true + false;
+            end.
+        """)
+
+    def test_string(self):
+
+        self.check_not_fails("""
+            begin
+                var s: string := 'asd' + 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' - 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' / 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' * 'dsa';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var b: string := 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' + 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: char := 'asd';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: char := '';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' and 'fgh' or 'asdsdf';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := false;
+            end.
+        """)
+
+    def test_compare(self):
+        self.check_not_fails("""
+            begin
+                var k: boolean := 1 + 2 = 3;
+            end.
+        """)
+
+    def test_scopes(self):
+        self.check_fails("""
+             begin
+                 a := 10;
+             end.
+         """)
+
+        self.check_fails("""
+            begin
+                var t3: boolean := true and false or t1 + true;
+            end.
+        """)
+
+        self.check_not_fails("""
+            var global1: integer := 1;
+            var global2: real := 2.0;
+
+            begin
+                global1 := 2;
+                global2 := global1;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (10 > 15) then
+                begin
+                    var i: integer := 10;
+                end
+                else if (100 > 90) then
+                begin
+                    print(i);
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (10 > 15) then
+                    var i: integer := 10
+                else if (10 > 15) then
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (10 > 15) then
+                    var i: integer := 10
+                else
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var a: integer := 1 to 10 do
+                    var b: boolean := true;
+
+                b := false;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var b: integer := 1 to 10 do
+                begin
+                    var a: boolean := true;
+                    if a > 1 then
+                    begin
+                        a := not (a);
+                    end;
+                end;
+
+                a := false;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                while true do
+                begin
+                    var b: integer := 10;
+                    while true do
+                    begin
+                        b := 15;
+                        var n: integer := 5;
+                    end;
+                    n := 10;
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            var a: integer := 10;
+            begin
+                var a: integer := 20;
+            end.
+        """)
+
+        self.check_fails("""
+            var a: integer := 10;
+            begin
+                for var a: integer := 1 to 10 do
+                    print(a);
+            end.
+        """)
+
+        self.check_fails("""
+            var a: integer := 10;
+            begin
+                if true then
+                begin
+                    for var a: integer := 1 to 10 do
+                        print();
+                end;
+            end.
+        """)
+
+    def test_call_functions(self):
+        self.check_not_fails("""
+            begin
+                print('some text');
+
+                var a: real := 1 + sqrt(5);
+
+                var b: integer := func1(func2(1), 1);
+                var c: integer := func1(func2(func3(func4())));
+                var d: integer := func1(func2(func3(c, b))) + func1();
+                var e: integer :=
+                    func1(func2(func3(func4(5, sqrt(8))), sqrt(2)))
+                    + func1(func2(func3(c, b))) + func1();
+
+                var lol: boolean := 1.2 > sqrt(2);
+                var lol2: boolean := sqrt(1) > sqrt(2);
+                var lol3: boolean := '__lol__' < 'kek';
+                var lol4: boolean := '' <> '' or '' >= '' or
+                    '' <= '' or '' > '' or '' = '';
+            end.
+        """)
+
+    def test_for_loop_semantic(self):
+        self.check_fails("""
+            begin
+                for var a: boolean := 1 to 10 do
+                    var b: boolean := true;
+            end.
+        """)
+
+        self.check_fails("""
+             begin
+                 for var a: boolean := true to 10 do
+                     var b: boolean := true;
+             end.
+         """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                    i := i + 1;
+                i := 12;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    print(i);
+                    i := i + 1;
+                end;
+                i := 12;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    print(i);
+                    i := i + 1;
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                for var i: integer := 1 + 1 to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: integer := 1;
+                for var i: integer := a + 1 to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: real := 1 to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1.0 to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := true to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 'a' to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 'asd' to 10 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10.0 do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to true do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 'a' do
+                    print(i);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 'ads' do
+                    print(i);
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    for var j: integer := 1 to 10 do
+                        print(i);
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    for var j: integer := 1 to 10 do
+                        print(i);
+                    j := 10;
+                    i := 10;
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    for var i: integer := 1 to 10 do
+                        print(i);
+                end;
+            end.
+        """)
+
+    def test_if_semantic(self):
+        self.check_not_fails("""
+            begin
+                if true then
+                begin
+                end
+                else if 1 > 1 then
+                    print(1)
+                else
+                    print(2);
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (5 > 4) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (5.0 > 4.0) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true > false) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: integer := 10;
+                var b: integer := 15;
+                if (a > b) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: real := 1.0;
+                var b: integer := 15;
+                if (a > b) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (10 > 15) then
+                begin
+                    print('lol');
+                end
+                else if (100 < 90) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true and false) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var b: boolean := sqrt(1) > sqrt(3);
+                if (sqrt(1) > sqrt(3)) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if ('asd' > 'dsa') then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (true > 15) then
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if (true) then
+                begin
+                    print('lol');
+                end
+                else
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                if (true) then
+                begin
+                    print('lol');
+                end
+                else
+                begin
+                    print('lol');
+                end
+                else
+                begin
+                    print('lol');
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if true then
+                begin
+                    if true then
+                        print()
+                    else
+                        print();
+                end
+                else
+                    print(1);
+            end.
+        """)
+
+    def test_until_loop_semantic(self):
+        self.check_not_fails("""
+            begin
+                var b: boolean := 1 > 3;
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until not (true) or b;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until 'c' > 'a';
+            end.
+        """)
+
+        self.check_not_fails("""
+                    begin
+                        repeat
+                            print();
+                        until true;
+                    end.
+                """)
+
+        self.check_not_fails("""
+                    begin
+                        var a: boolean := false;
+                        repeat
+                            print();
+                        until a;
+                    end.
+                """)
+
+        self.check_not_fails("""
+                    begin
+                        var a: boolean := false;
+                        repeat
+                            repeat
+                                print();
+                            until true;
+                            print();
+                        until a;
+                    end.
+                """)
+
+        self.check_not_fails("""
+                    begin
+                        repeat
+                            print();
+                        until 10 > 18;
+                    end.
+                """)
+
+        self.check_not_fails("""
+                    begin
+                        repeat
+                            print();
+                        until 10.06 > 18.5;
+                    end.
+                """)
+
+        self.check_not_fails("""
+                    begin
+                        repeat
+                            print();
+                        until sqrt(1) > sqrt(5);
+                    end.
+                """)
+
+        self.check_not_fails("""
+            begin
+                var a: boolean := false;
+                repeat
+                    if a then
+                        print();
+                until a;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                repeat
+                    for var i: integer := 1 to 10 do
+                    begin
+                        i := 15;
+                        print(i);
+                    end;
+                until true and (10 > 19);
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until 'c';
+            end.
+        """)
+
+        self.check_fails("""
+                    begin
+                        repeat
+                            print();
+                        until 'asd';
+                    end.
+                """)
+
+        self.check_fails("""
+            var a: integer;
+            var b: real;
+            begin
+                repeat
+                    print();
+                    var a: real := somefunc() - sqrt(2.4);
+                until a - b;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                repeat
+                    print();
+                until a > 10;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                repeat
+                    print();
+                until 'asd' + 'sdf';
+            end.
+        """)
+
+    def test_while_loop_semantic(self):
+        self.check_not_fails("""
+            var b: boolean := false;
+
+            begin
+                var a: boolean := false;
+                while a or true and 1 > 2 and 3 = 4 or not (7 - 8 <> -1) do
+                    print();
+
+                while a or true and 1 > 2 and 3 = 4 or not (7 - 8 <> -1) do
+                begin
+                    print();
+                    var c: real := somefunc() - sqrt(2.4);
+                    b := not(b);
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: boolean := false;
+                var b: boolean := false;
+
+                var c: integer := 10;
+                var d: integer := 15;
+
+                while a do
+                    print();
+
+                while a and b do
+                    print();
+
+                while true do
+                    print();
+
+                while true and b do
+                    print();
+
+                while c = d do
+                    print();
+
+                while c = d and a do
+                    print();
+
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: boolean := false;
+                var b: boolean := false;
+
+                var c: integer := 10;
+                var d: integer := 15;
+
+                while a do
+                begin
+                    print();
+                    print();
+                end;
+
+                while a and b do
+                begin
+                    print();
+                    print();
+                end;
+
+                while true do
+                begin
+                    print();
+                    print();
+                end;
+
+                while true and b do
+                begin
+                    print();
+                    print();
+                end;
+
+                while c = d do
+                begin
+                    print();
+                    print();
+                end;
+
+                while c = d and a do
+                begin
+                    print();
+                    print();
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: integer := 2;
+                var b: integer := 1;
+
+                while sqrt(a) = sqrt(b) do
+                    print();
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                while true do
+                begin
+                    while false do
+                        print();
+                    print();
+                    print();
+                end;
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                while true do
+                begin
+                    print();
+                    while true or false do
+                    begin
+                        print();
+                    end;
+
+                    var a: integer := 10;
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+
+                while a do
+                    print();
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+
+                while a + 2 do
+                    print();
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                while 'str' do
+                    print();
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                while 2.5 do
+                    print();
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                while 'c' do
+                    print();
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                while true do
+                begin
+                    while 'asd' do
+                        print();
+                end;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                while 3 and true do
+                    print();
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+
+                while a = (2 and true) do
+                    print();
+            end.
+        """)
+
+    def test_key_words_in_string_semantic(self):
+        self.check_not_fails("""
+            begin
+                if true then
+                    print()
+                else
+                    print('else');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                if true then
+                    print()
+                else
+                    var str: string := 'else';
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var s: string := 'else';
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                print('str');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                print('for');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                print('var');
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                for var i: integer := 1 to 10 do
+                begin
+                    print('for');
+                    if true then
+                        var a: string := 'if'
+                    else
+                        print('else');
+                end;
+            end.
+        """)
+
+    def test_division(self):
+        self.check_fails("""
+            begin
+                var a: integer := 10 / 5;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var s: string := 'asd' / 'sgd';
+            end.
+        """)
+
+    def test_operational_assignments(self):
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+                a += 1;
+            end.
+        """, NotImplementedError)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+                a -= 1;
+            end.
+        """, NotImplementedError)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+                a *= 1;
+            end.
+        """, NotImplementedError)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+                a /= 1;
+            end.
+        """, NotImplementedError)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+                a += true;
+            end.
+        """, NotImplementedError)
+
+        self.check_not_fails("""
+            begin
+                var a: string := '+=';
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 1;
+                if (true) then
+                    a *= 2;
+            end.
+        """, NotImplementedError)
