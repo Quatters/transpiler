@@ -155,6 +155,8 @@ LEXER_RULES = [
     LexerRule(Tag.COMMA, r','),
     LexerRule(Tag.DOT, r'\.'),
     LexerRule(Tag.QUOTE, r"\'"),
+    LexerRule(Special.ONE_LINE_COMMENT, r"\/\/.*?"),
+    LexerRule(Special.MULTI_LINE_COMMENT, r"\{.*?\}")
 ]
 
 GRAMMAR_RULES = [
