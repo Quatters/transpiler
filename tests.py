@@ -660,8 +660,8 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
         sem_an = self.get_semantic_analyzer(tree)
-        tree = sem_an.parse()
-        self.assertTrue(tree.is_semantically_correct)
+        code = sem_an.parse()
+        self.assertTrue(sem_an.tree.is_semantically_correct)
 
     def check_fails(self, code, err=SemanticError):
         lexer = self.get_lexer(code)

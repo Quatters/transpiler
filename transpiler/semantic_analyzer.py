@@ -1,6 +1,7 @@
 from transpiler.tree import SyntaxTree, Node
 from transpiler.settings import Tag, NT
 from transpiler.base import TranspilerError, TranspilerEnum
+from transpiler.code_generator import CodeGenerator
 from abc import ABC
 
 
@@ -372,6 +373,7 @@ class SemanticAnalyzer:
         self.tree = tree
         self.filepath = filepath
         self._visited_nodes = {}
+        self.code_generator = CodeGenerator()
 
         # 0 for global scope variables
         # 1 for nested if/for/while/until
@@ -391,7 +393,7 @@ class SemanticAnalyzer:
             self.dfs(self.tree.root, callback=self.perform_assertions)
             self.tree.is_semantically_correct = True
             self.tree.vars_dict = self.vars_dict
-            return self.tree
+            return self.code_generator.code
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
@@ -463,7 +465,8 @@ class SemanticAnalyzer:
                               NT.DEFINE_INLINE_VAR]:
                 self.assert_type_of_expression(node)
 
-        # self.code_generator.add_token(node, siblings, **self.vars_dict)
+        if isinstance(node.tag, Tag):
+            self.code_generator.add_token(node, siblings)
 
         if self.should_clear_vars_dict:
             self.vars_dict[self.current_scope] = {}
