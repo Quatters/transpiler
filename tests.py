@@ -922,6 +922,18 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
     def test_string(self):
+        self.check_fails("""
+            begin
+                var c: char := 'c' + 'asd';
+            end.
+        """)
+
+        self.check_not_fails("""
+            begin
+                var a: char := 'c';
+                var b: char := a;
+            end.
+        """)
 
         self.check_not_fails("""
             begin
