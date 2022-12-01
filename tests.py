@@ -1132,6 +1132,22 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
     def test_for_loop_semantic(self):
+        self.check_not_fails("""
+            begin
+                var a: integer := 10;
+                for var i: integer := 3 downto 1 do
+                    a := 1;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 10;
+                for var i: integer := 'str' downto 1 do
+                    a := 1;
+            end.
+        """)
+
         self.check_fails("""
             begin
                 for var a: boolean := 1 to 10 do
@@ -1910,3 +1926,54 @@ class WorkingGrammarTestCase(TestCase):
                     a *= 2;
             end.
         """, NotImplementedError)
+
+    def test_generator(self):
+        code = """
+            begin
+                var c: char := 'c' + 'asd';
+            end.
+        """
+
+        self.check_not_fails("""
+            begin
+                var c: string := '\n';
+            end.
+        """)
+
+        # self.check_fails("""
+        #     begin
+        #         var c: char := 'c' + 'asd';
+        #     end.
+        # """)
+
+        # code = """
+        #     begin
+        #         var a: integer := 10 + (5 * 4);
+        #         var b: real := 10.0;
+        #         var c: char := 'a';
+        #         var d: string := 'str';
+        #         var e: boolean := true;
+        #     end.
+        # """
+        #
+        # code = """
+        #     begin
+        #         for var i: integer := 1 to 3 do
+        #             print(i);
+        #     end.
+        # """
+        #
+        # code = """
+        #     begin
+        #         var i: integer;
+        #         i := 10;
+        #     end.
+        # """
+
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        code_result = sem_an.parse()
+        print(code_result)
+        self.assertTrue(sem_an.tree.is_semantically_correct)
