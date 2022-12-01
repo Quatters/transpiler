@@ -273,7 +273,7 @@ class CharType(BaseType):
                 cls.get_error_data(expr[0], VarType.CHAR)
             assert expr[-1].tag == Tag.QUOTE, \
                 cls.get_error_data(expr[0], VarType.CHAR)
-            assert len(expr) > 2 and len(expr[1].token.value) == 1, {
+            assert len(expr) == 3 and len(expr[1].token.value) == 1, {
                 'node': expr[1],
                 'message': 'invalid char, ensure value length is strictly 1'
             }
