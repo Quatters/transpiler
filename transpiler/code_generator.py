@@ -2,7 +2,7 @@ from transpiler.tree import Node
 from transpiler.base import TranspilerEnum
 
 
-class SharpVarType(TranspilerEnum):
+class SharpVarType:
     INT = "int"
     DOUBLE = "double"
     CHAR = "char"
@@ -12,16 +12,39 @@ class SharpVarType(TranspilerEnum):
     #переделать под TranspilerEnum
     @classmethod
     def type_to_sharp(cls, pas_type):
-        if pas_type.value == "integer":
+        if pas_type == "integer":
             return cls.INT
-        if pas_type.value == "real":
+        if pas_type == "real":
             return cls.DOUBLE
-        if pas_type.value == "char":
+        if pas_type == "char":
             return cls.CHAR
-        if pas_type.value == "string":
+        if pas_type == "string":
             return cls.STRING
-        if pas_type.value == "boolean":
+        if pas_type == "boolean":
             return cls.BOOL
+
+
+class SharpOperators:
+    COMPARE = "=="
+    NOTCOMPARE = "!="
+    AND = "&&"
+    OR = "||"
+    NOT = "!"
+
+    @classmethod
+    def operator_to_sharp(cls, pas_operator):
+        if pas_operator == "=":
+            return cls.COMPARE
+        if pas_operator == "<>":
+            return cls.NOTCOMPARE
+        if pas_operator == "and":
+            return cls.AND
+        if pas_operator == "or":
+            return cls.OR
+        if pas_operator == "not":
+            return cls.NOT
+        else:
+            return pas_operator
 
 
 class CodeGenerator:
@@ -29,7 +52,7 @@ class CodeGenerator:
     def __init__(self):
         self.code = ""
 
-        self.libs = "lib"
+        self.libs = ""
         self.global_vars = ""
         self.main_code = ""
 
@@ -73,14 +96,12 @@ class CodeGenerator:
                 for terminal in vars_dict[current_scope][siblings[1].token.value]['expr']:
                     token_values.append(terminal.token.value)
 
+                expression_string = self.parse_expression(token_values)
 
-                string_token_values = ''.join(token_values)
-                # string_token_values = ' '.join(token_values)
-
-                sharp_type = SharpVarType.type_to_sharp(vars_dict[current_scope][siblings[1].token.value]['type'])
+                sharp_type = SharpVarType.type_to_sharp(vars_dict[current_scope][siblings[1].token.value]['type'].value)
                 define_var = define_var.format(sharp_type,
                                                siblings[1].token.value,
-                                               string_token_values)
+                                               expression_string)
                 self.main_code += define_var
 
         if node.tag.value == "for":
@@ -90,7 +111,41 @@ class CodeGenerator:
             pass
 
     def get_result(self):
-        return self.main_template.format(self.libs, self.global_vars, self.main_code).strip()
+        return self.main_template.format(self.libs, self.global_vars, self.main_code)
 
-    def find_char(self, terminals):
-        pass
+    def get_libs(self):
+        return self.libs
+
+    def get_global_vars(self):
+        return self.global_vars
+
+    def get_main_code(self):
+        return self.main_code
+
+    def parse_expression(self, terminals: list[Node]) -> str:
+        indexes = []
+        slices = []
+        counter = 0
+
+        for i in range(len(terminals)):
+            if terminals[i] == "'":
+                indexes.append(i)
+                counter += 1
+
+            if counter == 2:
+                counter = 0
+                slices.append(terminals[indexes[-2] + 1:indexes[-1]])
+
+            if counter == 0 and terminals[i] != "'":
+                slices.append(terminals[i])
+
+        for i in range(len(slices)):
+            if isinstance(slices[i], str):
+                slices[i] = SharpOperators.operator_to_sharp(slices[i])
+                slices[i] = "".join(slices[i])
+            elif len(slices[i]) == 1 and len(slices[i][0]) == 1:
+                slices[i] = "\'" + " ".join(slices[i]) + "\'"
+            else:
+                slices[i] = "\"" + " ".join(slices[i]) + "\""
+
+        return " ".join(slices)

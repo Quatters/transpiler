@@ -1940,19 +1940,66 @@ class WorkingGrammarTestCase(TestCase):
         """, NotImplementedError)
 
     def test_generator(self):
-        code = """
-            begin
-                var c: char := 'c' + 'asd';
-            end.
+        template = """
+        {0}
+
+        namespace Transpiler
+        {{
+            internal class Program
+            {{
+                {1}
+                public static void Main(string[] args)
+                {2}
+            }}
+        }}
         """
+        # можно сравнивать только параметры
 
-        self.check_not_fails("""
-            begin
-                var c: string := '\n';
-            end.
-        """)
 
-        # self.check_fails("""
+        # code = """
+        #     begin
+        #         var b: boolean := true and false or false = true <> false;
+        #     end.
+        # """
+
+
+        # code = """
+        #     begin
+        #         var b: boolean := 'asd' = ('asd' = 'asd') and true;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var c: string := 'asdads' + 'asd ads' + 'asdf' + 'dfg';
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var a: integer := 10 + 19;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var b: boolean := 'asd' = ('sgsd' + ('asd' + 'sdf'));
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var b: boolean := 'ad' = ('ads' + 'ad');
+        #     end.
+        # """
+
+        # self.check_not_fails("""
+        #     begin
+        #         var c: string := '\n';
+        #     end.
+        # """)
+
+        # self.check_not_fails("""
         #     begin
         #         var c: char := 'c' + 'asd';
         #     end.
@@ -1967,6 +2014,13 @@ class WorkingGrammarTestCase(TestCase):
         #         var e: boolean := true;
         #     end.
         # """
+
+        code = """
+            begin
+                var b: boolean := 'a' <> 'c';
+            end.
+        """
+
         #
         # code = """
         #     begin
@@ -1989,3 +2043,5 @@ class WorkingGrammarTestCase(TestCase):
         code_result = sem_an.parse()
         print(code_result)
         self.assertTrue(sem_an.tree.is_semantically_correct)
+
+
