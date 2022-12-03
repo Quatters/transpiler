@@ -14,4 +14,4 @@ def transpile(code: str):
     semantic_analyzer = SemanticAnalyzer(tree)
     semantic_analyzer.parse()
 
-    return code
+    return 'dummy'

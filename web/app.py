@@ -15,10 +15,14 @@ async def get_page() -> HTMLResponse:
 @app.post('/transpile')
 async def get_transpiled(code: Code) -> TranspileResult:
     try:
-        return TranspileResult(result=transpile(code.code), success=True).json()
-    except TranspilerError:
+        result = transpile(code.code)
+        return TranspileResult(
+            result=result,
+            success=True,
+        )
+    except TranspilerError as error:
         traceback.print_exc()
         return TranspileResult(
-            result=traceback.format_exc(),
+            result=f'{error.__class__.__name__}: {error}',
             success=False,
         )

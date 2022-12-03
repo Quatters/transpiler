@@ -1,6 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Mono&display=swap');
+
+html, body {
+  height: 100%;
+}
+
 .editor-wrapper {
   overflow: auto;
-  height: 80vh;
+  height: 85vh;
   font-size: 13px;
   border: 1px solid lightgray;
+  position: relative;
+}
+
+.editor-wrapper * {
+  font-family: 'Noto Sans Mono', monospace;
+}
+
+#status-line {
+  font-family: 'Noto Sans Mono', monospace;
+  font-size: 14px;
+  margin-bottom: 0.5rem;
 }

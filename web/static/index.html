@@ -26,26 +26,45 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <div class="row mt-3">
             <div class="col">
                 <p>Pascal source code</p>
-                <div class="editor-wrapper" onclick="sourceCm.focus()">
-                    <textarea id="sourcecode" class="visually-hidden"></textarea>
-                </div>
-                <div>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="send()">
+                <div class="d-flex mb-2">
+                    <input type="file""
+                        accept=" .py, .pas, .txt"
+                        class="form-control form-control-sm" id="file-input">
+                    <button class="btn btn-danger btn-sm ms-1"
+                        id="button-clear">
+                        Clear
+                    </button>
+                    <button class="btn btn-primary btn-sm ms-1"
+                        id="button-transpile">
                         Transpile
                     </button>
+                </div>
+                <div class="editor-wrapper" onclick="sourceCm.focus()"
+                    id="sourcecode-wrapper">
+                    <textarea id="sourcecode"
+                        class="visually-hidden"></textarea>
                 </div>
             </div>
             <div class="col">
                 <p>C# transpiled code</p>
-                <div class="editor-wrapper" onclick="destCm.focus()">
+                <div class="d-flex mb-2">
+                    <button class="btn btn-primary btn-sm"
+                        id="button-download"
+                        disabled>
+                        Download
+                    </button>
+                </div>
+                <div class="editor-wrapper" onclick="destCm.focus()"
+                    id="destcode-wrapper">
                     <textarea id="destcode" class="visually-hidden"></textarea>
                 </div>
             </div>
         </div>
+        <div id="status-line" class="position-absolute bottom-0"></div>
     </div>
 </body>
 
