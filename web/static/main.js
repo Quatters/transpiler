@@ -11,7 +11,6 @@ function restoreData() {
     const canDownload = window.localStorage.getItem('canDownload') || false;
     sourceCm.setValue(sourcecode);
     destCm.setValue(destcode);
-    buttonDownload.toggleAttribute('disabled', !canDownload);
     fileInput.value = '';
 }
 

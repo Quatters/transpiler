@@ -502,11 +502,13 @@ class SemanticAnalyzer:
                     is NT.MANIPULATE_VAR:
                 assign_node = manipulate_var_node.children[0].children[0]
                 if assign_node.tag is not Tag.ASSIGN:
-                    raise \
-                        NotImplementedError(f'operational assignments '
-                                            f'are not yet implemented '
-                                            f'({self.filepath}:'
-                                            f'{assign_node.token.line})')
+                    msg = \
+                        f'{assign_node.token.value} at line ' \
+                        f'{assign_node.token.line} - operational assignments ' \
+                        'are not implemented yet'
+                    if self.filepath:
+                        msg += f' ({self.filepath}:{assign_node.token.line})'
+                    raise TranspilerError(msg)
                 assert_func = self._assert_type_of_abstract_statement
         elif node.tag is NT.DEFINE_INLINE_VAR:
             assert_func = self._assert_type_of_inline_define_var
