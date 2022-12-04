@@ -381,6 +381,7 @@ class SemanticAnalyzer:
         self.current_scope = 0
         self.vars_dict = {self.current_scope: {}}
         self.__is_in_string = False
+        self.right_terminals = []
 
         self.__is_in_string_perform_assertions = False
 
@@ -455,6 +456,7 @@ class SemanticAnalyzer:
                         'message': 'multiple else blocks are not allowed'
                     }
 
+            # надо поймать абстракт стейтмент
             elif node.tag is NT.CALL_ARGS:
                 self.check_call_args_for_vars(node)
             elif node.tag in [NT.DEFINE_VAR,
@@ -464,7 +466,7 @@ class SemanticAnalyzer:
                 self.assert_type_of_expression(node)
 
         if isinstance(node.tag, Tag):
-            self.code_generator.add_token(node, siblings, self.vars_dict, self.current_scope)
+            self.code_generator.add_token(node, siblings, self.vars_dict, self.current_scope, self.right_terminals)
 
         if self.should_clear_vars_dict:
             self.vars_dict[self.current_scope] = {}
@@ -577,6 +579,7 @@ class SemanticAnalyzer:
         self.dfs(abstract_statement_node,
                  callback=self._collect_right_terminals)
 
+        # self.save_var(left_var, , ri)
         self.assert_expr_type(left_var)
 
     def _assert_type_of_abstract_expr(self, node: Node, left_var):

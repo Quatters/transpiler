@@ -1485,6 +1485,7 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
+
     def test_until_loop_semantic(self):
         self.check_not_fails("""
             begin
@@ -1955,6 +1956,99 @@ class WorkingGrammarTestCase(TestCase):
         """
         # можно сравнивать только параметры
 
+        # code = """
+        #     begin
+        #         var a: integer := 10;
+        #         a := 15 + 20 + 30;
+        #     end.
+        # """
+
+
+        # code = """
+        #     begin
+        #         var a: integer := ((10 + 1) * 3) - 100;
+        #         var b: boolean := not (true);
+        #     end.
+        # """
+
+        # self.check_not_fails("""
+        #     begin
+        #       for var i: integer := 0 to 3 do
+        #       begin
+        #         var g: boolean := true;
+        #       end;
+        #       var g: boolean := true;
+        #     end.
+        # """)
+
+        # self.check_not_fails("""
+        #     begin
+        #         var a: integer := 10;
+        #         for var i: integer := 1 + a to a do
+        #             print(i);
+        #     end.
+        # """)
+
+        code = """
+            begin
+                var asd: integer;
+                if true then
+                    var a: integer := 10
+                else if false then
+                    var b: integer := 15
+                else
+                    var c: integer := 20;
+            end.
+        """
+
+        # code = """
+        #     begin
+        #         repeat
+        #             var a: integer := 1;
+        #         until true;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         while true do
+        #             var a: integer := 10;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var c: integer := 15;
+        #         for var i: integer := 1 to c do
+        #             var a: integer;
+        #
+        #         for var i: integer := 10 downto 1 do
+        #             var g: string := 'asdgf' + 'fsdf';
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var b: boolean := 15 > 10;
+        #         b := false;
+        #         if true and b then
+        #         begin
+        #             var a: integer:= 10;
+        #         end;
+        #     end.
+        # """
+
+        # code = """
+        #     var g1: boolean := true;
+        #     var g2: real := 15.5;
+        #     begin
+        #         var a: integer := 10 + 12;
+        #         var b: integer := 5 * 9;
+        #         var c: boolean := a = b;
+        #         a := 15 + 30;
+        #         c := g1 and true;
+        #     end.
+        # """
 
         # code = """
         #     begin
@@ -2000,6 +2094,8 @@ class WorkingGrammarTestCase(TestCase):
         # """)
 
         # self.check_not_fails("""
+        #     var a: integer := 10;
+        #     a := 15;
         #     begin
         #         var c: char := 'c' + 'asd';
         #     end.
@@ -2015,11 +2111,11 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        code = """
-            begin
-                var b: boolean := 'a' <> 'c';
-            end.
-        """
+        # code = """
+        #     begin
+        #         var b: boolean := 'a' <> 'c';
+        #     end.
+        # """
 
         #
         # code = """
