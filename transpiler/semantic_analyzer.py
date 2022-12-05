@@ -433,7 +433,9 @@ class SemanticAnalyzer:
                 # self.vars_dict[self.current_scope] = {}
                 self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
-                self.current_scope += 1
+                if not (node.tag is Tag.IF and
+                        node.parent.tag is NT.ELSE_BLOCK_RIGHT):
+                    self.current_scope += 1
                 if node.tag is Tag.IF:
                     abstract_expr_node = siblings[1].children[0]
                 elif node.tag is Tag.REPEAT:
@@ -462,8 +464,6 @@ class SemanticAnalyzer:
                               NT.ABSTRACT_STATEMENT,
                               NT.DEFINE_INLINE_VAR]:
                 self.assert_type_of_expression(node)
-
-        # self.code_generator.add_token(node, siblings, **self.vars_dict)
 
         if self.should_clear_vars_dict:
             self.vars_dict[self.current_scope] = {}

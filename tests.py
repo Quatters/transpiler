@@ -636,21 +636,17 @@ class SyntaxAnalyzerTestCase(TestCase):
 
 
 class WorkingGrammarTestCase(TestCase):
-    # For now there are not any asserts since testing parse tree is
-    # extremely routine task. Nevertheless, if something would break the lexer
-    # or syntax analyzer these tests will fail with their own exceptions.
-
     def get_lexer(self, code):
-        lexer = Lexer(settings.Tag, settings.LEXER_RULES, 'dummy.pas')
+        lexer = Lexer(settings.Tag, settings.LEXER_RULES)
         lexer.buffer = code
         return lexer
 
     def get_syntax_analyzer(self):
-        sa = SyntaxAnalyzer(settings.GRAMMAR_RULES, 'dummy.pas')
+        sa = SyntaxAnalyzer(settings.GRAMMAR_RULES)
         return sa
 
     def get_semantic_analyzer(self, tree):
-        return SemanticAnalyzer(tree, "dummy.pas")
+        return SemanticAnalyzer(tree)
 
     def get_code_generator(self):
         raise NotImplementedError
@@ -662,8 +658,9 @@ class WorkingGrammarTestCase(TestCase):
         sem_an = self.get_semantic_analyzer(tree)
         tree = sem_an.parse()
         self.assertTrue(tree.is_semantically_correct)
+        return sem_an
 
-    def check_fails(self, code, err=SemanticError):
+    def check_fails(self, code, err=SemanticError, msg=None):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
@@ -671,6 +668,8 @@ class WorkingGrammarTestCase(TestCase):
         sem_an = self.get_semantic_analyzer(tree)
         with self.assertRaises(err) as error:
             sem_an.parse()
+        if msg is not None:
+            self.assertEqual(str(error.exception), msg)
 
         logger.info(f"Raised {error.exception}")
 
@@ -1003,17 +1002,54 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
     def test_scopes(self):
+        sem_an = self.check_not_fails("""
+            begin
+                if true then
+                    var a: integer := 10
+                else if false then
+                    var b: integer := 15
+                else if false then
+                begin
+                    if true then
+                        print()
+                    else if true then
+                        print()
+                    else
+                        var c: integer := 20;
+                end;
+            end.
+        """)
+        self.assertEqual(sem_an.current_scope, 0)
+
         self.check_fails("""
-             begin
-                 a := 10;
-             end.
-         """)
+            begin
+                if true then
+                    var a: integer := 10
+                else if false then
+                    a := 15;
+            end.
+        """, msg='a at line 6 - variable is not defined')
+
+        self.check_fails("""
+            begin
+                if true then
+                    var a: integer := 10
+                else
+                    a := 15;
+            end.
+        """, msg='a at line 6 - variable is not defined')
+
+        self.check_fails("""
+            begin
+                a := 10;
+            end.
+         """, msg='a at line 3 - variable is not defined')
 
         self.check_fails("""
             begin
                 var t3: boolean := true and false or t1 + true;
             end.
-        """)
+        """, msg='t1 at line 3 - variable is not defined')
 
         self.check_not_fails("""
             var global1: integer := 1;
@@ -1036,7 +1072,7 @@ class WorkingGrammarTestCase(TestCase):
                     print(i);
                 end;
             end.
-        """)
+        """, msg='i at line 9 - variable is not defined')
 
         self.check_fails("""
             begin
@@ -1045,7 +1081,7 @@ class WorkingGrammarTestCase(TestCase):
                 else if (10 > 15) then
                     print(i);
             end.
-        """)
+        """, msg='i at line 6 - variable is not defined')
 
         self.check_fails("""
             begin
@@ -1054,7 +1090,7 @@ class WorkingGrammarTestCase(TestCase):
                 else
                     print(i);
             end.
-        """)
+        """, msg='i at line 6 - variable is not defined')
 
         self.check_fails("""
             begin
@@ -1063,14 +1099,14 @@ class WorkingGrammarTestCase(TestCase):
 
                 b := false;
             end.
-        """)
+        """, msg='b at line 6 - variable is not defined')
 
         self.check_fails("""
             begin
                 for var b: integer := 1 to 10 do
                 begin
                     var a: boolean := true;
-                    if a > 1 then
+                    if a then
                     begin
                         a := not (a);
                     end;
@@ -1078,7 +1114,7 @@ class WorkingGrammarTestCase(TestCase):
 
                 a := false;
             end.
-        """)
+        """, msg='a at line 12 - variable is not defined')
 
         self.check_fails("""
             begin
@@ -1093,14 +1129,14 @@ class WorkingGrammarTestCase(TestCase):
                     n := 10;
                 end;
             end.
-        """)
+        """, msg='n at line 11 - variable is not defined')
 
         self.check_fails("""
             var a: integer := 10;
             begin
                 var a: integer := 20;
             end.
-        """)
+        """, msg='a at line 4 - variable is already defined')
 
         self.check_fails("""
             var a: integer := 10;
@@ -1108,7 +1144,7 @@ class WorkingGrammarTestCase(TestCase):
                 for var a: integer := 1 to 10 do
                     print(a);
             end.
-        """)
+        """, msg='a at line 4 - variable is already defined')
 
         self.check_fails("""
             var a: integer := 10;
@@ -1119,7 +1155,7 @@ class WorkingGrammarTestCase(TestCase):
                         print();
                 end;
             end.
-        """)
+        """, msg='a at line 6 - variable is already defined')
 
     def test_call_functions(self):
         self.check_not_fails("""
