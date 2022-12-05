@@ -1959,6 +1959,14 @@ class WorkingGrammarTestCase(TestCase):
         # code = """
         #     begin
         #         var a: integer := 10;
+        #         if true then
+        #             a := 20;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var a: integer := 10;
         #         a := 15 + 20 + 30;
         #     end.
         # """
@@ -1989,17 +1997,80 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """)
 
-        code = """
-            begin
-                var asd: integer;
-                if true then
-                    var a: integer := 10
-                else if false then
-                    var b: integer := 15
-                else
-                    var c: integer := 20;
-            end.
-        """
+        # code = """
+        #     begin
+        #         if true then
+        #             var j: integer := 10;
+        #
+        #         if true then
+        #             var a: integer := 10
+        #         else if false then
+        #             var b: integer := 15
+        #         else
+        #         begin
+        #             var c: integer := 20;
+        #         end;
+        #
+        #         if true then
+        #             var t1: integer := 10 + 5;
+        #
+        #         if true then
+        #             var t2: integer := 17
+        #         else
+        #             var t3: integer;
+        #
+        #         if true then
+        #             var t4: integer
+        #         else if true then
+        #             var t5 : integer
+        #         else
+        #             var t6: integer;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var a : integer := 10;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var asd : integer := 100;
+        #
+        #         if true then
+        #             var e: integer := 30;
+        #
+        #         if true then
+        #             var a: integer := 10
+        #         else
+        #             var b: integer := 15;
+        #
+        #         if true then
+        #         begin
+        #             var c: integer := 20;
+        #         end
+        #         else
+        #             var d: integer := 25;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         if true then
+        #         begin
+        #             if false then
+        #                 var a: integer := 10;
+        #         end;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         if true then
+        #             var a: integer;
+        #     end.
+        # """
 
         # code = """
         #     begin
@@ -2013,19 +2084,51 @@ class WorkingGrammarTestCase(TestCase):
         #     begin
         #         while true do
         #             var a: integer := 10;
+        #
+        #         var b: integer := 10;
+        #         var c: integer := 15;
         #     end.
         # """
 
         # code = """
         #     begin
-        #         var c: integer := 15;
-        #         for var i: integer := 1 to c do
-        #             var a: integer;
-        #
-        #         for var i: integer := 10 downto 1 do
-        #             var g: string := 'asdgf' + 'fsdf';
+        #         while true do
+        #             var a: integer := 10;
         #     end.
         # """
+
+        # code = """
+        #     begin
+        #
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var a: integer := 10;
+        #         var b: integer;
+        #         b := 15;
+        #     end.
+        # """
+
+        code = """
+            begin
+                var c: integer := 15;
+                for var i: integer := 1 to c do
+                    var a: integer;
+
+                for var i: integer := 10 downto 1 do
+                    var g: string := 'asdgf' + 'fsdf';
+                    
+                var b: boolean := 15 > 10;
+                    
+                b := false;
+                if true and b then
+                begin
+                    var a: integer:= 10;
+                end;
+            end.
+        """
 
         # code = """
         #     begin

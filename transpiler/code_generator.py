@@ -54,6 +54,7 @@ class CodeGenerator:
         self.siblings = []
         self.right_terminals = []
         self.current_scope = 0
+        self.tabs = ""
 
         self.libs = ""
         self.global_vars = ""
@@ -71,6 +72,8 @@ class CodeGenerator:
         self.is_global_vars = True
         self.is_inside_command = False
         self.is_inside_for_declaration = False
+        self.is_last_else = False
+        self.is_inline_if = False
 
         self.main_template = """
 {0}
@@ -79,9 +82,9 @@ namespace Transpiler
 {{
     internal class Program
     {{
-        {1}
+{1}
         public static void Main(string[] args)
-        {2}
+{2}
     }}
 }}
 """
@@ -93,11 +96,16 @@ namespace Transpiler
         self.vars_dict = vars_dict
         self.current_scope = current_scope
         self.right_terminals = right_terminals
+        self.tabs = "\t\t" + "\t" * current_scope
 
         if node.token.value in [";", "then", "do"]:
             self.is_inside_command = False
             if node.token.value == ";":
-                self.main_code += ";\n"
+                if self.is_global_vars:
+                    self.global_vars += ";\n"
+                else:
+                    if self.main_code[-2] != "}":
+                        self.main_code += ";\n"
             if node.token.value == "do" and self.is_inside_for_declaration:
                 self.is_inside_for_declaration = False
                 self.main_code += self.for_statement.format(self.for_parts["first"],
@@ -106,10 +114,10 @@ namespace Transpiler
 
         if node.token.value == "begin":
             self.is_global_vars = False
-            self.main_code += "{\n"
+            self.main_code += self.tabs + "{\n"
 
         if node.token.value == "end":
-            self.main_code += "}\n"
+            self.main_code += self.tabs + "}\n"
 
         if node.tag.value == "var":
             self.var_handling()
@@ -123,7 +131,7 @@ namespace Transpiler
         if node.tag.value == "for":
             self.for_handling()
 
-        if node.tag.value == "to":
+        if node.tag.value in ["to", "downto"]:
             expression_string = self.parse_expression(right_terminals)
             self.for_parts["second"] += expression_string
 
@@ -143,10 +151,8 @@ namespace Transpiler
     def var_handling(self):
         self.is_inside_command = True
         var_type = self.siblings[3].token.value
-        # var_type = vars_dict[current_scope][siblings[1].token.value]['type'].value
         var_name = self.siblings[1].token.value
         var_expr = self.right_terminals
-        # var_expr = vars_dict[current_scope][siblings[1].token.value]['expr']
         if self.is_inside_for_declaration:
             var_expr = self.vars_dict[self.current_scope][self.siblings[1].token.value]['expr']
             self.for_parts["first"] = self.define_var_with_value(var_type,
@@ -155,11 +161,11 @@ namespace Transpiler
 
         elif self.is_global_vars:
             if len(var_expr) == 0:
-                self.global_vars += self.define_var_without_value(var_type, var_name)
+                self.global_vars += "\t\t" + self.define_var_without_value(var_type, var_name)
             else:
-                self.global_vars += self.define_var_with_value(var_type,
-                                                               var_name,
-                                                               var_expr)
+                self.global_vars += "\t\t" + self.define_var_with_value(var_type,
+                                                                        var_name,
+                                                                        var_expr)
         else:
             if len(var_expr) == 0:
                 self.main_code += self.define_var_without_value(var_type, var_name)
@@ -170,17 +176,21 @@ namespace Transpiler
 
     def if_handling(self):
         self.is_inside_command = True
-        if_statement = "if ({0})\n"
+        if_statement = self.tabs + "if ({0})\n"
         expression_string = self.parse_expression(self.right_terminals)
         self.main_code += if_statement.format(expression_string)
 
     def else_handling(self):
-        self.main_code += "else "
+        self.is_inside_command = False
+        self.is_inline_if = False
+        if self.main_code[-1] != "\n":
+            self.main_code += "\n"
+        self.main_code += self.tabs + "else\n"
 
     def for_handling(self):
         self.is_inside_command = True
         self.is_inside_for_declaration = True
-        self.for_statement = "for ({0}; {1}; {2})\n"
+        self.for_statement = self.tabs + "for ({0}; {1}; {2})\n"
         var_name = self.siblings[1].children[1].token.value
         if self.siblings[2].children[0].token.value == "to":
             self.for_parts["third"] = var_name + "++"
@@ -192,20 +202,20 @@ namespace Transpiler
     def id_handling(self):
         self.is_inside_command = True
 
-        assign_var = "{0} = {1}\n"
+        assign_var = self.tabs + "\t" + "{0} = {1}"
         var_name = self.node.token.value
         var_expr = self.right_terminals
         expression_string = self.parse_expression(var_expr)
         self.main_code += assign_var.format(var_name, expression_string)
 
     def while_handling(self):
-        while_statement = "while ({0})\n"
+        while_statement = self.tabs + "while ({0})\n"
         expression_string = self.parse_expression(self.right_terminals)
         self.main_code += while_statement.format(expression_string)
 
     def repeat_handling(self):
-        self.main_code += "do {\n"
-        self.until_expr = "}} while ({0})\n"
+        self.main_code += self.tabs + "do {\n"
+        self.until_expr = self.tabs + "}} while ({0})"
 
         expression_string = self.parse_expression(self.right_terminals)
         self.until_expr = self.until_expr.format(expression_string)
@@ -216,22 +226,23 @@ namespace Transpiler
 
     def define_var_without_value(self, var_type, var_name):
         define_var = "{0} {1}"
-        # if len(self.siblings) < 4:
-        #     define_var += "\n"
         sharp_type = SharpVarType.type_to_sharp(var_type)
-        define_var = define_var.format(sharp_type, var_name)
+        define_var = self.tabs + "\t" + define_var.format(sharp_type, var_name)
         return define_var
 
     def define_var_with_value(self, var_type, var_name, var_expr):
         define_var = "{0} {1} = {2}"
-        # if len(self.siblings) < 6 and not self.is_inside_for_declaration:
-        #     define_var += "\n"
         expression_string = self.parse_expression(var_expr)
 
         sharp_type = SharpVarType.type_to_sharp(var_type)
-        define_var = define_var.format(sharp_type,
-                                       var_name,
-                                       expression_string)
+        if self.is_inside_for_declaration:
+            define_var = define_var.format(sharp_type,
+                                           var_name,
+                                           expression_string)
+        else:
+            define_var = self.tabs + "\t" + define_var.format(sharp_type,
+                                                              var_name,
+                                                              expression_string)
         return define_var
 
     def parse_expression(self, var_expr) -> str:
@@ -277,6 +288,3 @@ namespace Transpiler
 
     def get_main_code(self):
         return self.main_code
-
-
-# заметки: возможно не понадобится использовать варс дикт
