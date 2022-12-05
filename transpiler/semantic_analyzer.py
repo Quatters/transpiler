@@ -454,7 +454,6 @@ class SemanticAnalyzer:
                         'message': 'multiple else blocks are not allowed'
                     }
 
-            # надо поймать абстракт стейтмент
             elif node.tag is NT.CALL_ARGS:
                 self.check_call_args_for_vars(node)
             elif node.tag in [NT.DEFINE_VAR,

@@ -1,5 +1,4 @@
 from transpiler.tree import Node
-from transpiler.base import TranspilerEnum
 
 
 class SharpVarType:
@@ -56,7 +55,7 @@ class CodeGenerator:
         self.current_scope = 0
         self.tabs = ""
 
-        self.libs = ""
+        self.libs = "using System;\n"
         self.global_vars = ""
         self.main_code = ""
 
@@ -77,7 +76,6 @@ class CodeGenerator:
 
         self.main_template = """
 {0}
-
 namespace Transpiler
 {{
     internal class Program
@@ -89,7 +87,6 @@ namespace Transpiler
 }}
 """
 
-    # каррент скоуп возможно понадобится для расстановки табов
     def add_token(self, node: Node, siblings: list[Node], vars_dict, current_scope, right_terminals):
         self.node = node
         self.siblings = siblings
@@ -168,9 +165,9 @@ namespace Transpiler
                                                                         var_expr)
         else:
             if len(var_expr) == 0:
-                self.main_code += self.define_var_without_value(var_type, var_name)
+                self.main_code += self.tabs + "\t" + self.define_var_without_value(var_type, var_name)
             else:
-                self.main_code += self.define_var_with_value(var_type,
+                self.main_code += self.tabs + "\t" + self.define_var_with_value(var_type,
                                                              var_name,
                                                              var_expr)
 
@@ -227,7 +224,7 @@ namespace Transpiler
     def define_var_without_value(self, var_type, var_name):
         define_var = "{0} {1}"
         sharp_type = SharpVarType.type_to_sharp(var_type)
-        define_var = self.tabs + "\t" + define_var.format(sharp_type, var_name)
+        define_var = define_var.format(sharp_type, var_name)
         return define_var
 
     def define_var_with_value(self, var_type, var_name, var_expr):
@@ -240,9 +237,9 @@ namespace Transpiler
                                            var_name,
                                            expression_string)
         else:
-            define_var = self.tabs + "\t" + define_var.format(sharp_type,
-                                                              var_name,
-                                                              expression_string)
+            define_var = define_var.format(sharp_type,
+                                           var_name,
+                                           expression_string)
         return define_var
 
     def parse_expression(self, var_expr) -> str:

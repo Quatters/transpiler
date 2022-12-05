@@ -1943,7 +1943,6 @@ class WorkingGrammarTestCase(TestCase):
     def test_generator(self):
         template = """
         {0}
-
         namespace Transpiler
         {{
             internal class Program
@@ -1997,36 +1996,36 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """)
 
-        # code = """
-        #     begin
-        #         if true then
-        #             var j: integer := 10;
-        #
-        #         if true then
-        #             var a: integer := 10
-        #         else if false then
-        #             var b: integer := 15
-        #         else
-        #         begin
-        #             var c: integer := 20;
-        #         end;
-        #
-        #         if true then
-        #             var t1: integer := 10 + 5;
-        #
-        #         if true then
-        #             var t2: integer := 17
-        #         else
-        #             var t3: integer;
-        #
-        #         if true then
-        #             var t4: integer
-        #         else if true then
-        #             var t5 : integer
-        #         else
-        #             var t6: integer;
-        #     end.
-        # """
+        code = """
+            begin
+                if true then
+                    var j: integer := 10;
+
+                if true then
+                    var a: integer := 10
+                else if false then
+                    var b: integer := 15
+                else
+                begin
+                    var c: integer := 20;
+                end;
+
+                if true then
+                    var t1: integer := 10 + 5;
+
+                if true then
+                    var t2: integer := 17
+                else
+                    var t3: integer;
+
+                if true then
+                    var t4: integer
+                else if true then
+                    var t5 : integer
+                else
+                    var t6: integer;
+            end.
+        """
 
         # code = """
         #     begin
@@ -2072,15 +2071,15 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        code = """
-            begin
-                repeat
-                    var a: integer := 1;
-                until true;
-                
-                var b: integer := 10;
-            end.
-        """
+        # code = """
+        #     begin
+        #         repeat
+        #             var a: integer := 1;
+        #         until true;
+        #
+        #         var b: integer := 10;
+        #     end.
+        # """
 
         # code = """
         #     begin
@@ -2144,6 +2143,32 @@ class WorkingGrammarTestCase(TestCase):
         # """
 
         # code = """
+        #     begin
+        #         var a: integer := 10;
+        #         a := 15;
+        #         print('lol');
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         print('lol');
+        #     end.
+        # """
+
+        # self.check_not_fails("""
+        #     begin
+        #         var a: boolean := true = print(sqrt(10));
+        #     end.
+        # """)
+
+        # code = """
+        #     begin
+        #
+        #     end.
+        # """
+
+        # code = """
         #     var g1: boolean := true;
         #     var g2: real := 15.5;
         #     begin
@@ -2160,7 +2185,6 @@ class WorkingGrammarTestCase(TestCase):
         #         var b: boolean := true and false or false = true <> false;
         #     end.
         # """
-
 
         # code = """
         #     begin
