@@ -2072,13 +2072,15 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        # code = """
-        #     begin
-        #         repeat
-        #             var a: integer := 1;
-        #         until true;
-        #     end.
-        # """
+        code = """
+            begin
+                repeat
+                    var a: integer := 1;
+                until true;
+                
+                var b: integer := 10;
+            end.
+        """
 
         # code = """
         #     begin
@@ -2111,24 +2113,24 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        code = """
-            begin
-                var c: integer := 15;
-                for var i: integer := 1 to c do
-                    var a: integer;
-
-                for var i: integer := 10 downto 1 do
-                    var g: string := 'asdgf' + 'fsdf';
-                    
-                var b: boolean := 15 > 10;
-                    
-                b := false;
-                if true and b then
-                begin
-                    var a: integer:= 10;
-                end;
-            end.
-        """
+        # code = """
+        #     begin
+        #         var c: integer := 15;
+        #         for var i: integer := 1 to c do
+        #             var a: integer;
+        #
+        #         for var i: integer := 10 downto 1 do
+        #             var g: string := 'asdgf' + 'fsdf';
+        #
+        #         var b: boolean := 15 > 10;
+        #
+        #         b := false;
+        #         if true and b then
+        #         begin
+        #             var a: integer:= 10;
+        #         end;
+        #     end.
+        # """
 
         # code = """
         #     begin

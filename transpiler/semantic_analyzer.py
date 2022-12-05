@@ -430,9 +430,7 @@ class SemanticAnalyzer:
                 not self.__is_in_string_perform_assertions
         elif not self.__is_in_string_perform_assertions:
 
-            if node.tag is Tag.SEMICOLON \
-                    and siblings[0].tag \
-                    in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
+            if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.REPEAT, Tag.IF]:
                 self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
                 self.current_scope += 1
