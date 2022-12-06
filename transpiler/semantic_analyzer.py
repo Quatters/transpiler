@@ -1,7 +1,6 @@
 from transpiler.tree import SyntaxTree, Node
 from transpiler.settings import Tag, NT
 from transpiler.base import TranspilerError, TranspilerEnum
-from transpiler.code_generator import CodeGenerator
 from abc import ABC
 
 
@@ -373,7 +372,6 @@ class SemanticAnalyzer:
         self.tree = tree
         self.filepath = filepath
         self._visited_nodes = {}
-        self.code_generator = CodeGenerator()
 
         # 0 for global scope variables
         # 1 for nested if/for/while/until
@@ -381,7 +379,6 @@ class SemanticAnalyzer:
         self.current_scope = 0
         self.vars_dict = {self.current_scope: {}}
         self.__is_in_string = False
-        self.right_terminals = []
 
         self.__is_in_string_perform_assertions = False
 
@@ -394,7 +391,7 @@ class SemanticAnalyzer:
             self.dfs(self.tree.root, callback=self.perform_assertions)
             self.tree.is_semantically_correct = True
             self.tree.vars_dict = self.vars_dict
-            return self.code_generator.get_result()
+            return self.tree
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
@@ -430,7 +427,10 @@ class SemanticAnalyzer:
                 not self.__is_in_string_perform_assertions
         elif not self.__is_in_string_perform_assertions:
 
-            if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.REPEAT, Tag.IF]:
+            if node.tag is Tag.SEMICOLON \
+                    and siblings[0].tag \
+                    in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
+                # self.vars_dict[self.current_scope] = {}
                 self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
                 self.current_scope += 1
@@ -445,6 +445,7 @@ class SemanticAnalyzer:
                     self.assert_type_of_expression(abstract_expr_node)
 
             elif node.tag is Tag.ELSE:
+                # self.vars_dict[self.current_scope] = {}
                 self.else_flag = True
                 self.should_clear_vars_dict = True
                 if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
@@ -528,7 +529,7 @@ class SemanticAnalyzer:
     def _assert_type_of_define_var(self, node: Node):
         left_var = node.children[1]
         self.assert_var_is_not_defined(left_var)
-        # self.save_var(left_var, type=node.children[3].token.value)
+        self.save_var(left_var, type=node.children[3].token.value)
 
         optional_define_var_assignment_node = node.children[4]
         self.right_terminals = []
@@ -536,7 +537,6 @@ class SemanticAnalyzer:
         self.dfs(optional_define_var_assignment_node,
                  callback=self._collect_right_terminals)
 
-        self.save_var(left_var, type=node.children[3].token.value, terminals=self.right_terminals)
         self.assert_expr_type(left_var)
 
     def _assert_type_of_inline_define_var(self, node: Node):
@@ -548,7 +548,7 @@ class SemanticAnalyzer:
             "node": left_var,
             "message": "iterator of for loop must be integer, char or boolean"
         }
-        # self.save_var(left_var, node_type)
+        self.save_var(left_var, node_type)
 
         define_var_assignment_node = node.children[4]
         self.right_terminals = []
@@ -556,7 +556,6 @@ class SemanticAnalyzer:
         self.dfs(define_var_assignment_node,
                  callback=self._collect_right_terminals)
 
-        self.save_var(left_var, node_type, terminals=self.right_terminals)
         self.assert_expr_type(left_var)
 
         abstract_expr_node = node.parent.children[3]
@@ -576,7 +575,6 @@ class SemanticAnalyzer:
         self.dfs(abstract_statement_node,
                  callback=self._collect_right_terminals)
 
-        # self.save_var(left_var, , ri)
         self.assert_expr_type(left_var)
 
     def _assert_type_of_abstract_expr(self, node: Node, left_var):
@@ -640,10 +638,9 @@ class SemanticAnalyzer:
         except ValueError:
             pass
 
-    def save_var(self, node, type, terminals):
+    def save_var(self, node, type):
         scoped_vars = self.vars_dict.get(self.current_scope, {})
-        scoped_vars[node.token.value] = {'type': VarType.from_str(type),
-                                         'expr': terminals}
+        scoped_vars[node.token.value] = {'type': VarType.from_str(type)}
         self.vars_dict[self.current_scope] = scoped_vars
 
     def get_var_type(self, node: Node) -> VarType:
