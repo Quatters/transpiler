@@ -433,7 +433,9 @@ class SemanticAnalyzer:
             if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.REPEAT, Tag.IF]:
                 self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
-                self.current_scope += 1
+                if not (node.tag is Tag.IF and
+                        node.parent.tag is NT.ELSE_BLOCK_RIGHT):
+                    self.current_scope += 1
                 if node.tag is Tag.IF:
                     abstract_expr_node = siblings[1].children[0]
                 elif node.tag is Tag.REPEAT:
