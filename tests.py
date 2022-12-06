@@ -2048,12 +2048,28 @@ class WorkingGrammarTestCase(TestCase):
                 else
                     var c: integer := 20;
 
-                var g: integer;
+
+
+                var g3: integer;
+                var g4: integer := 100;
+                g4 := 110;
 
                 if true then
                     var t1: integer := 10 + 5;
             end.
         """
+
+        # code = """
+        #     begin
+        #         if true then
+        #         begin
+        #             for var i: integer := 1 to 10 do
+        #             begin
+        #                 var a: integer := 10 + i;
+        #             end;
+        #         end;
+        #     end.
+        # """
 
         # code = """
         #     begin

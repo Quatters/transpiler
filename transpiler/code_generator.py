@@ -181,7 +181,7 @@ namespace Transpiler
         self.is_inside_command = False
         self.is_inline_if = False
         if self.main_code[-1] != "\n":
-            self.main_code += "\n"
+            self.main_code += ";\n"
         self.main_code += self.tabs + "else\n"
 
     def for_handling(self):

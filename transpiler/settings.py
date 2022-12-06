@@ -363,3 +363,10 @@ GRAMMAR_RULES = [
         (Tag.REPEAT, NT.BODY, Tag.UNTIL, NT.ABSTRACT_EXPR, Tag.SEMICOLON),
     })
 ]
+
+
+SHARP_FUNCTIONS = {
+    "print": "Console.WriteLine",
+    "sqrt": "Sqrt",
+    "exp": "Exp"
+}
