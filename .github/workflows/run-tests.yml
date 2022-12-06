@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  run-tests:
     runs-on: ubuntu-22.04
 
     steps:
@@ -36,8 +36,8 @@ jobs:
 
     - name: Run unittest
       run: |
-        LOG_LEVEL=debug python -m unittest
+        python -m unittest
 
     - name: Check supported_syntax
       run: |
-        LOG_LEVEL=debug python -m transpiler examples/supported_syntax.pas
+        python -m transpiler examples/supported_syntax.pas
