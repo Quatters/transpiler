@@ -41,3 +41,13 @@ jobs:
     - name: Check supported_syntax
       run: |
         python -m transpiler examples/supported_syntax.pas
+
+  build-docker:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build docker image
+        run: |
+          docker build .
