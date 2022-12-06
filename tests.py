@@ -2006,24 +2006,12 @@ class WorkingGrammarTestCase(TestCase):
                 else if false then
                     var b: integer := 15
                 else
-                begin
                     var c: integer := 20;
-                end;
+
+                var g: integer;
 
                 if true then
                     var t1: integer := 10 + 5;
-
-                if true then
-                    var t2: integer := 17
-                else
-                    var t3: integer;
-
-                if true then
-                    var t4: integer
-                else if true then
-                    var t5 : integer
-                else
-                    var t6: integer;
             end.
         """
 
