@@ -2046,8 +2046,9 @@ class WorkingGrammarTestCase(TestCase):
 
         code = """
             begin
-                var a : integer := 10;
-                print(10, 15, 'asd');
+                var lol4: integer := 1;
+                var lol3: integer := lol4 + sqrt(10, sqrt(sqrt(sqrt(0)))) + lol4 + 1;
+                print(lol4 + sqrt(10, sqrt(sqrt(sqrt('lol')))), lol3 + lol4);
             end.
         """
 
@@ -2327,5 +2328,3 @@ class WorkingGrammarTestCase(TestCase):
         code_result = sem_an.parse()
         print(code_result)
         self.assertTrue(sem_an.tree.is_semantically_correct)
-
-
