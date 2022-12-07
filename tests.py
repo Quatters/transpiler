@@ -2036,28 +2036,43 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """)
 
+        # code = """
+        #     begin
+        #         var a: integer := 10;
+        #         a := 10;
+        #         print(a);
+        #     end.
+        # """
+
         code = """
             begin
-                if true then
-                    var j: integer := 10;
-
-                if true then
-                    var a: integer := 10
-                else if false then
-                    var b: integer := 15
-                else
-                    var c: integer := 20;
-
-
-
-                var g3: integer;
-                var g4: integer := 100;
-                g4 := 110;
-
-                if true then
-                    var t1: integer := 10 + 5;
+                var a : integer := 10;
+                print(10, 15, 'asd');
             end.
         """
+
+        # code = """
+        #     begin
+        #         if true then
+        #             var j: integer := 10;
+        #
+        #         if true then
+        #             var a: integer := 10
+        #         else if false then
+        #             var b: integer := 15
+        #         else
+        #             var c: integer := 20;
+        #
+        #
+        #
+        #         var g3: integer;
+        #         var g4: integer := 100;
+        #         g4 := 110;
+        #
+        #         if true then
+        #             var t1: integer := 10 + 5;
+        #     end.
+        # """
 
         # code = """
         #     begin

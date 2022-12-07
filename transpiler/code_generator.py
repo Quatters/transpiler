@@ -1,4 +1,5 @@
 from transpiler.tree import Node
+from transpiler.settings import Tag, NT
 
 
 class SharpVarType:
@@ -143,7 +144,10 @@ namespace Transpiler
             self.until_handling()
 
         if node.tag.value == "id" and not self.is_inside_command:
-            self.id_handling()
+            if self.siblings[1].children[0].tag is NT.CALL:
+                pass
+            else:
+                self.id_handling()
 
     def var_handling(self):
         self.is_inside_command = True
@@ -204,6 +208,14 @@ namespace Transpiler
         var_expr = self.right_terminals
         expression_string = self.parse_expression(var_expr)
         self.main_code += assign_var.format(var_name, expression_string)
+
+    def function_handling(self):
+        self.is_inside_command = True
+        function_call = "{0}({1})"
+        function_name = self.node.token.value
+
+
+        # function_args =
 
     def while_handling(self):
         while_statement = self.tabs + "while ({0})\n"

@@ -550,7 +550,6 @@ class SemanticAnalyzer:
             "node": left_var,
             "message": "iterator of for loop must be integer, char or boolean"
         }
-        # self.save_var(left_var, node_type)
 
         define_var_assignment_node = node.children[4]
         self.right_terminals = []
@@ -578,7 +577,6 @@ class SemanticAnalyzer:
         self.dfs(abstract_statement_node,
                  callback=self._collect_right_terminals)
 
-        # self.save_var(left_var, , ri)
         self.assert_expr_type(left_var)
 
     def _assert_type_of_abstract_expr(self, node: Node, left_var):
