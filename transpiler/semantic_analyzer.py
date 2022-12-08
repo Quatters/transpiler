@@ -168,6 +168,8 @@ class PascalChar(PascalString):
 
 
 class BaseType(ABC):
+    is_in_func: bool = False
+
     @staticmethod
     def get_error_data(node: Node, expected_type: str):
         return {
@@ -187,13 +189,24 @@ class BaseType(ABC):
 
     @classmethod
     def check_node(cls, node: Node):
-        raise NotImplementedError
+        if cls.entered_func(node):
+            cls.is_in_func = True
+        elif cls.left_func(node):
+            cls.is_in_func = False
+
+    @classmethod
+    def entered_func(cls, node: Node) -> bool:
+        return node.tag is Tag.LBRACKET and node.parent.tag is NT.CALL
+
+    @classmethod
+    def left_func(cls, node: Node) -> bool:
+        return node.tag is Tag.RBRACKET and node.parent.tag is NT.CALL
 
     @classmethod
     def is_var(cls, node: Node):
         try:
             return node.parent.children[1].children[0].tag is not NT.CALL
-        except (IndexError):
+        except IndexError:
             return True
 
     @classmethod
@@ -222,7 +235,6 @@ class BaseType(ABC):
 
 
 class IntType(BaseType):
-    # учесть деление
     @classmethod
     def check_node(cls, node: Node):
         acceptable = [
@@ -232,11 +244,14 @@ class IntType(BaseType):
             Tag.RBRACKET,
             Tag.COMMA,
         ]
-        assert node.tag in acceptable \
-            and node.token.value != '/' \
+        super().check_node(node)
+        assert cls.is_in_func or \
+            node.tag in acceptable \
+                and node.token.value != '/' \
             or node.tag is Tag.ID \
-            and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER]) \
-            or node.tag is Tag.ID and not cls.is_var(node), \
+                and cls.is_var(node) \
+                and cls.is_type(node, [VarType.INTEGER]) \
+            or not cls.is_var(node), \
             cls.get_error_data(node, VarType.INTEGER)
 
 
@@ -251,11 +266,14 @@ class RealType(BaseType):
             Tag.RBRACKET,
             Tag.COMMA,
         ]
-        assert node.tag in acceptable \
+        super().check_node(node)
+        assert cls.is_in_func or \
+            node.tag in acceptable \
             or node.tag is Tag.ID \
-            and cls.is_var(node) \
-            and cls.is_type(node, [VarType.INTEGER, VarType.REAL]) \
-            or node.tag is Tag.ID and not cls.is_var(node), \
+                and cls.is_var(node) \
+                and cls.is_type(node, [VarType.INTEGER, VarType.REAL]) \
+            or node.tag is Tag.ID \
+                and not cls.is_var(node), \
             cls.get_error_data(node, VarType.REAL)
 
 
@@ -266,8 +284,8 @@ class CharType(BaseType):
         cls.current_scope = current_scope
 
         if expr[0].tag is Tag.ID:
-            assert cls.is_type(expr[0], [VarType.CHAR]) \
-                or not cls.is_var(expr[0]), \
+            assert not cls.is_var(expr[0]) \
+                or cls.is_type(expr[0], [VarType.CHAR]), \
                 cls.get_error_data(expr[0], VarType.CHAR)
         else:
             assert expr[0].tag == Tag.QUOTE, \
@@ -288,6 +306,9 @@ class StringType(BaseType):
 
     @classmethod
     def check_node(cls, node: Node):
+        super().check_node(node)
+        if cls.is_in_func or node.tag is Tag.RBRACKET:
+            return
         if node.tag == Tag.QUOTE:
             cls.is_string = not cls.is_string
         elif not cls.is_string:
@@ -363,7 +384,10 @@ class BooleanType(BaseType):
             str_expr = ' '.join(map(parse_node, cls.expr))
             internal_vars = {}
             exec(f'exec_result = {str_expr}', globals(), internal_vars)
-            assert isinstance(internal_vars['exec_result'], bool), error_data
+            assert isinstance(
+                internal_vars['exec_result'],
+                (bool, PascalAnyComparable)
+            ), error_data
         except TypeError:
             raise AssertionError(error_data)
 

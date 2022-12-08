@@ -1167,6 +1167,7 @@ class WorkingGrammarTestCase(TestCase):
     def test_call_functions(self):
         self.check_not_fails("""
             begin
+                var a1: integer := somefunc('some arg');
                 print('some text');
 
                 var a: real := 1 + sqrt(5);
@@ -1183,6 +1184,27 @@ class WorkingGrammarTestCase(TestCase):
                 var lol3: boolean := '__lol__' < 'kek';
                 var lol4: boolean := '' <> '' or '' >= '' or
                     '' <= '' or '' > '' or '' = '';
+
+                var lol5: integer := func1(1.1);
+                var lol6: integer := func1('');
+                var lol7: integer := func1(true);
+
+                var lol8: real := func1(True);
+                var lol9: real := func1('');
+
+                var lol10: boolean := func1(1);
+                var lol11: boolean := func1(1.1);
+                var lol12: boolean := func1('fds');
+
+                var lol13: char := func1(1);
+                var lol14: char := func1(1.1);
+                var lol15: char := func1(false);
+                var lol16: char := func1('fds');
+
+                var lol17: string := func1(1);
+                var lol18: string := func1(1.1);
+                var lol19: string := func1(false);
+                var lol20: string := func1('fds');
             end.
         """)
 
