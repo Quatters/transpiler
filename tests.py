@@ -2053,8 +2053,9 @@ class WorkingGrammarTestCase(TestCase):
 
         code = """
             begin
-                var a: integer := 10 + sqrt(10 + 15);
-                print(print(10 + 20), a + sqrt(a and true));
+                var lol4: integer := 1;
+                var lol3: integer := lol4 + sqrt(10, sqrt(sqrt(sqrt(0)))) + lol4 + 1;
+                print(lol4 + sqrt(10, sqrt(sqrt(sqrt('lol')))), lol3 + lol4);
             end.
         """
 
