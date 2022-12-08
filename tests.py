@@ -2044,10 +2044,17 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
+        # code = """
+        #     begin
+        #         var a : integer := 10;
+        #         print(10, 15, 'asd');
+        #     end.
+        # """
+
         code = """
             begin
-                var a : integer := 10;
-                print(10, 15, 'asd');
+                var a: integer := 10 + sqrt(10 + 15);
+                print(print(10 + 20), a + sqrt(a and true));
             end.
         """
 

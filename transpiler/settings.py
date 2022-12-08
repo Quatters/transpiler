@@ -368,5 +368,6 @@ GRAMMAR_RULES = [
 SHARP_FUNCTIONS = {
     "print": "Console.WriteLine",
     "sqrt": "Sqrt",
-    "exp": "Exp"
+    "exp": "Exp",
+    "sqr": "Sqr"
 }

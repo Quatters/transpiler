@@ -1,5 +1,5 @@
 from transpiler.tree import Node
-from transpiler.settings import Tag, NT
+from transpiler.settings import Tag, NT, SHARP_FUNCTIONS
 
 
 class SharpVarType:
@@ -54,6 +54,7 @@ class CodeGenerator:
         self.siblings = []
         self.right_terminals = []
         self.current_scope = 0
+        self.current_call_args_scope = 0
         self.tabs = ""
 
         self.libs = "using System;\n"
@@ -71,6 +72,7 @@ class CodeGenerator:
 
         self.is_global_vars = True
         self.is_inside_command = False
+        self.is_inside_args = False
         self.is_inside_for_declaration = False
         self.is_last_else = False
         self.is_inline_if = False
@@ -95,6 +97,9 @@ namespace Transpiler
         self.current_scope = current_scope
         self.right_terminals = right_terminals
         self.tabs = "\t\t" + "\t" * current_scope
+        if node.tag is Tag.LBRACKET and node.parent.tag is NT.CALL:
+            self.current_call_args_scope += 1
+            self.is_inside_args = True
 
         if node.token.value in [";", "then", "do"]:
             self.is_inside_command = False
@@ -144,10 +149,40 @@ namespace Transpiler
             self.until_handling()
 
         if node.tag.value == "id" and not self.is_inside_command:
-            if self.siblings[1].children[0].tag is NT.CALL:
-                pass
+            if self.is_inside_args or self.is_func():
+                id_name = node.token.value
+                if self.is_func():
+                    id_name = SHARP_FUNCTIONS[node.token.value]
+                if self.current_call_args_scope == 0:
+                    self.main_code += self.tabs + '\t'
+                self.main_code += id_name
             else:
                 self.id_handling()
+
+        if self.is_inside_args or self.is_func():
+            if node.tag is Tag.COMMA and not self.is_inside_command:
+                self.main_code += ', '
+
+            if node.tag in [Tag.MATH_OPERATOR] and not self.is_inside_command:
+                self.main_code += f' {node.token.value} '
+
+            if node.tag in [Tag.BOOLEAN_OPERATOR] and not self.is_inside_command:
+                sharp_operator = SharpOperators.operator_to_sharp(node.token.value)
+                self.main_code += f' {sharp_operator} '
+
+            if not self.is_inside_command and node.tag in [Tag.LBRACKET, Tag.RBRACKET, Tag.NUMBER_FLOAT, Tag.NUMBER_INT, Tag.BOOLEAN_VALUE]:
+                self.main_code += node.token.value
+
+        if node.tag is Tag.RBRACKET and node.parent.tag is NT.CALL:
+            self.current_call_args_scope -= 1
+            if self.current_call_args_scope == 0:
+                self.is_inside_args = False
+
+    def is_func(self) -> bool:
+        try:
+            return self.siblings[1].children[0].tag is NT.CALL
+        except IndexError:
+            return False
 
     def var_handling(self):
         self.is_inside_command = True
