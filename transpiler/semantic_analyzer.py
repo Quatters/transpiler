@@ -392,7 +392,6 @@ class SemanticAnalyzer:
     def parse(self):
         try:
             self.dfs(self.tree.root, callback=self.perform_assertions)
-            self.tree.is_semantically_correct = True
             self.tree.vars_dict = self.vars_dict
             return self.code_generator.get_result()
         except AssertionError as error:
