@@ -2051,11 +2051,21 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
+        # code = """
+        #     begin
+        #         var lol4: integer := 1;
+        #         var lol3: integer := lol4 + sqrt(10, sqrt(sqrt(sqrt(0)))) + lol4 + 1;
+        #         print(lol4 + sqrt(10, sqrt(sqrt(sqrt('lol')))), lol3 + lol4);
+        #
+        #         var s: string := 'a' + 'asd';
+        #     end.
+        # """
+
         code = """
             begin
-                var lol4: integer := 1;
-                var lol3: integer := lol4 + sqrt(10, sqrt(sqrt(sqrt(0)))) + lol4 + 1;
-                print(lol4 + sqrt(10, sqrt(sqrt(sqrt('lol')))), lol3 + lol4);
+                var a: integer := 10 + 15;
+                var s: string := 'asd sdf' + 'aasd'; 
+                var c: char := 's';
             end.
         """
 

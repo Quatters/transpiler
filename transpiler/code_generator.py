@@ -74,8 +74,8 @@ class CodeGenerator:
         self.is_inside_command = False
         self.is_inside_args = False
         self.is_inside_for_declaration = False
-        self.is_last_else = False
         self.is_inline_if = False
+        self.is_char_declaration = False
 
         self.main_template = """
 {0}
@@ -160,6 +160,9 @@ namespace Transpiler
                 self.id_handling()
 
         if self.is_inside_args or self.is_func():
+            if node.tag is Tag.QUOTE and not self.is_inside_command:
+                self.main_code += "\""
+
             if node.tag is Tag.COMMA and not self.is_inside_command:
                 self.main_code += ', '
 
@@ -189,6 +192,10 @@ namespace Transpiler
         var_type = self.siblings[3].token.value
         var_name = self.siblings[1].token.value
         var_expr = self.right_terminals
+
+        if var_type == "char":
+            self.is_char_declaration = True;
+
         if self.is_inside_for_declaration:
             var_expr = self.vars_dict[self.current_scope][self.siblings[1].token.value]['expr']
             self.for_parts["first"] = self.define_var_with_value(var_type,
@@ -299,7 +306,7 @@ namespace Transpiler
             terminals.append(terminal.token.value)
 
         for i in range(len(terminals)):
-            if terminals[i] == "'":
+            if self.right_terminals[i].token.value == "'":
                 indexes.append(i)
                 counter += 1
 
@@ -310,13 +317,23 @@ namespace Transpiler
             if counter == 0 and terminals[i] != "'":
                 slices.append(terminals[i])
 
+            # print('asd')
+
+        # 10 + (asd)
+        result = []
         for i in range(len(slices)):
             if isinstance(slices[i], str):
+                # if slices[i].tag is Tag.BOOLEAN_OPERATOR:
+
                 slices[i] = SharpOperators.operator_to_sharp(slices[i])
                 slices[i] = "".join(slices[i])
-            elif len(slices[i]) == 1 and len(slices[i][0]) == 1:
+            elif self.is_char_declaration:
+                self.is_char_declaration = False
                 slices[i] = "\'" + " ".join(slices[i]) + "\'"
+            # elif len(slices[i]) == 1 and len(slices[i][0]) == 1:
+            #     slices[i] = "\'" + " ".join(slices[i]) + "\'"
             else:
+                # можно попробовать применить генератор
                 slices[i] = "\"" + " ".join(slices[i]) + "\""
 
         return " ".join(slices)
