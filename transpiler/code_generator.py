@@ -57,7 +57,7 @@ class CodeGenerator:
         self.current_call_args_scope = 0
         self.tabs = ""
 
-        self.libs = "using System;\n"
+        self.libs = "using System;\nusing static System.Math;\n"
         self.global_vars = ""
         self.main_code = ""
 
@@ -96,7 +96,7 @@ namespace Transpiler
         self.vars_dict = vars_dict
         self.current_scope = current_scope
         self.right_terminals = right_terminals
-        self.tabs = "\t\t" + "\t" * current_scope
+        self.tabs = " " * 8 + (" " * 4) * current_scope
         if node.tag is Tag.LBRACKET and node.parent.tag is NT.CALL:
             self.current_call_args_scope += 1
             self.is_inside_args = True
@@ -154,7 +154,7 @@ namespace Transpiler
                 if self.is_func():
                     id_name = SHARP_FUNCTIONS[node.token.value]
                 if self.current_call_args_scope == 0:
-                    self.main_code += self.tabs + '\t'
+                    self.main_code += self.tabs + ' ' * 4
                 self.main_code += id_name
             else:
                 self.id_handling()
@@ -204,16 +204,16 @@ namespace Transpiler
 
         elif self.is_global_vars:
             if len(var_expr) == 0:
-                self.global_vars += "\t\t" + self.define_var_without_value(var_type, var_name)
+                self.global_vars += " " * 8 + self.define_var_without_value(var_type, var_name)
             else:
-                self.global_vars += "\t\t" + self.define_var_with_value(var_type,
+                self.global_vars += " " * 8 + self.define_var_with_value(var_type,
                                                                         var_name,
                                                                         var_expr)
         else:
             if len(var_expr) == 0:
-                self.main_code += self.tabs + "\t" + self.define_var_without_value(var_type, var_name)
+                self.main_code += self.tabs + " " * 4 + self.define_var_without_value(var_type, var_name)
             else:
-                self.main_code += self.tabs + "\t" + self.define_var_with_value(var_type,
+                self.main_code += self.tabs + " " * 4 + self.define_var_with_value(var_type,
                                                              var_name,
                                                              var_expr)
 
@@ -245,7 +245,7 @@ namespace Transpiler
     def id_handling(self):
         self.is_inside_command = True
 
-        assign_var = self.tabs + "\t" + "{0} = {1}"
+        assign_var = self.tabs + " " * 4 + "{0} = {1}"
         var_name = self.node.token.value
         var_expr = self.right_terminals
         expression_string = self.parse_expression(var_expr)
@@ -297,16 +297,22 @@ namespace Transpiler
         return define_var
 
     def parse_expression(self, var_expr) -> str:
+
         indexes = []
         slices = []
         counter = 0
 
         terminals = []
         for terminal in var_expr:
-            terminals.append(terminal.token.value)
+            if terminal.token.value in SHARP_FUNCTIONS:
+                terminals.append(SHARP_FUNCTIONS[terminal.token.value])
+            elif terminal.token.value.lower() in ['true', 'false']:
+                terminals.append(terminal.token.value.lower())
+            else:
+                terminals.append(terminal.token.value)
 
         for i in range(len(terminals)):
-            if self.right_terminals[i].token.value == "'":
+            if terminals[i] == "'":
                 indexes.append(i)
                 counter += 1
 
@@ -317,26 +323,22 @@ namespace Transpiler
             if counter == 0 and terminals[i] != "'":
                 slices.append(terminals[i])
 
-            # print('asd')
-
-        # 10 + (asd)
-        result = []
         for i in range(len(slices)):
             if isinstance(slices[i], str):
-                # if slices[i].tag is Tag.BOOLEAN_OPERATOR:
+                # if slices[i] == ""
 
-                slices[i] = SharpOperators.operator_to_sharp(slices[i])
+                if slices[i] == ",":
+                    slices[i] = "".join(slices[i] + " ")
+                elif slices[i] in ['-', '+', '/', '*', 'and', 'or', '>', '<', '>=', '<=', '=', '<>']:
+                    slices[i] = " " + SharpOperators.operator_to_sharp(slices[i]) + " "
                 slices[i] = "".join(slices[i])
             elif self.is_char_declaration:
                 self.is_char_declaration = False
                 slices[i] = "\'" + " ".join(slices[i]) + "\'"
-            # elif len(slices[i]) == 1 and len(slices[i][0]) == 1:
-            #     slices[i] = "\'" + " ".join(slices[i]) + "\'"
             else:
-                # можно попробовать применить генератор
                 slices[i] = "\"" + " ".join(slices[i]) + "\""
 
-        return " ".join(slices)
+        return "".join(slices)
 
     def get_result(self):
         return self.main_template.format(self.libs, self.global_vars, self.main_code)

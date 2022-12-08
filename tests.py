@@ -2076,6 +2076,7 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
+
         # code = """
         #     begin
         #         var lol4: integer := 1;
@@ -2086,13 +2087,15 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        code = """
-            begin
-                var a: integer := 10 + 15;
-                var s: string := 'asd sdf' + 'aasd'; 
-                var c: char := 's';
-            end.
-        """
+        # code = """
+        #     begin
+        #         var a: integer := 10 + 15;
+        #         var s: string := 'asd sdf' + 'aasd';
+        #         var c: char := 's';
+        #
+        #         var b: boolean := 10 >= 15;
+        #     end.
+        # """
 
         # code = """
         #     begin
@@ -2266,9 +2269,52 @@ class WorkingGrammarTestCase(TestCase):
 
         # code = """
         #     begin
+        #         var a1: integer := somefunc('some arg');
+        #         print('some text');
         #
+        #         var a: real := 1 + sqrt(5);
+        #
+        #         var b: integer := func1(func2(1), 1);
+        #         var c: integer := func1(func2(func3(func4())));
+        #         var d: integer := func1(func2(func3(c, b))) + func1();
+        #         var e: integer :=
+        #             func1(func2(func3(func4(5, sqrt(8))), sqrt(2)))
+        #             + func1(func2(func3(c, b))) + func1();
+        #
+        #         var lol: boolean := 1.2 > sqrt(2);
+        #         var lol2: boolean := sqrt(1) > sqrt(2);
+        #         var lol3: boolean := '__lol__' < 'kek';
+        #         var lol4: boolean := '' <> '' or '' >= '' or
+        #             '' <= '' or '' > '' or '' = '';
+        #
+        #         var lol5: integer := func1(1.1);
+        #         var lol6: integer := func1('');
+        #         var lol7: integer := func1(true);
+        #
+        #         var lol8: real := func1(True);
+        #         var lol9: real := func1('');
+        #
+        #         var lol10: boolean := func1(1);
+        #         var lol11: boolean := func1(1.1);
+        #         var lol12: boolean := func1('fds');
+        #
+        #         var lol13: char := func1(1);
+        #         var lol14: char := func1(1.1);
+        #         var lol15: char := func1(false);
+        #         var lol16: char := func1('fds');
+        #
+        #         var lol17: string := func1(1);
+        #         var lol18: string := func1(1.1);
+        #         var lol19: string := func1(false);
+        #         var lol20: string := func1('fds');
         #     end.
         # """
+
+        code = """
+            begin
+                var a: integer := print(print(True, False), 15);
+            end.
+        """
 
         # code = """
         #     var g1: boolean := true;
