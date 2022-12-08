@@ -682,6 +682,10 @@ class WorkingGrammarTestCase(TestCase):
             var a: integer := (1 * 2 - 4) * 5 / 7 - 8;
             begin
                 var b: boolean := not (1 > 2) and false;
+                somefunc(1, 2, 3, 4, 'fsdfsdf', somefunc('', 1 - 2),
+                    somefunc(somefunc()));
+                var c: integer := somefunc(1, 2, 3, 4,
+                    'fsdfsdf', somefunc('', 1 - 2), somefunc(somefunc()));
             end.
         """
         lexer = self.get_lexer(code)
@@ -2345,5 +2349,3 @@ class WorkingGrammarTestCase(TestCase):
         code_result = sem_an.parse()
         print(code_result)
         self.assertTrue(sem_an.tree.is_semantically_correct)
-
-

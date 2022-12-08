@@ -305,7 +305,7 @@ GRAMMAR_RULES = [
         (Special.LAMBDA,)
     }),
     GrammarRule(NT.CALL_ARGS_RIGHT, {
-        (Tag.COMMA, NT.ABSTRACT_EXPR),
+        (Tag.COMMA, NT.ABSTRACT_EXPR, NT.CALL_ARGS_RIGHT),
         (Special.LAMBDA,)
     }),
 
