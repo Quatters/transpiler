@@ -2033,7 +2033,7 @@ class WorkingGrammarTestCase(TestCase):
                 var d: char := 'd';
                 
                 var e: string := 'string';
-                var e1: string := 'string' + 'false' + 'for if else while' + 'e' + e;
+                var e1: string := 'string' + 'false' + 'for if else while' + 'e+1' + e;
             end.
         """, "",
         """
@@ -2474,7 +2474,7 @@ namespace Transpiler
                 var s1: string := 'for else' + 'asddsa';
                 var s2: string := 'True' + 'asddsa';
                 
-                print('+for');
+                print('+ for');
             end.
         """
 
