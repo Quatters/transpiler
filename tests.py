@@ -676,6 +676,18 @@ class WorkingGrammarTestCase(TestCase):
 
         logger.info(f"Raised {error.exception}")
 
+    def check_generator(self, code, valid_globals, valid_main):
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        code_result = sem_an.parse()
+
+        globals = sem_an.code_generator.get_global_vars()
+        main = sem_an.code_generator.get_main_code()
+
+        # print(code_result)
+
     def test_expressions_syntax(self):
         code = """
             var a: integer := (1 * 2 - 4) * 5 / 7 - 8;
@@ -2310,11 +2322,11 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        code = """
-            begin
-                var a: integer := print(print(True, False), 15);
-            end.
-        """
+        # code = """
+        #     begin
+        #         var a: integer := print(print(True, False), 15);
+        #     end.
+        # """
 
         # code = """
         #     var g1: boolean := true;
@@ -2408,6 +2420,12 @@ class WorkingGrammarTestCase(TestCase):
         #         i := 10;
         #     end.
         # """
+
+        code = """
+            begin
+                print('print for else + 10');
+            end.
+        """
 
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()

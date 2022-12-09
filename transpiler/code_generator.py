@@ -56,6 +56,7 @@ class CodeGenerator:
         self.current_scope = 0
         self.current_call_args_scope = 0
         self.tabs = ""
+        self.string_nodes_value = []
 
         self.libs = "using System;\nusing static System.Math;\n"
         self.global_vars = ""
@@ -76,6 +77,7 @@ class CodeGenerator:
         self.is_inside_for_declaration = False
         self.is_inline_if = False
         self.is_char_declaration = False
+        self.is_in_string_in_args = False
 
         self.main_template = """
 {0}
@@ -101,7 +103,7 @@ namespace Transpiler
             self.current_call_args_scope += 1
             self.is_inside_args = True
 
-        if node.token.value in [";", "then", "do"]:
+        if node.token.value in [";", "then", "do"] and not self.is_inside_args:
             self.is_inside_command = False
             if node.token.value == ";":
                 if self.is_global_vars:
@@ -115,40 +117,40 @@ namespace Transpiler
                                                             self.for_parts["second"],
                                                             self.for_parts["third"])
 
-        if node.token.value == "begin":
+        if node.token.value == "begin" and not self.is_inside_args:
             self.is_global_vars = False
             self.main_code += self.tabs + "{\n"
 
-        if node.token.value == "end":
+        if node.token.value == "end" and not self.is_inside_args:
             self.main_code += self.tabs + "}\n"
 
-        if node.tag.value == "var":
+        if node.tag.value == "var" and not self.is_inside_args:
             self.var_handling()
 
-        if node.tag.value == "if":
+        if node.tag.value == "if" and not self.is_inside_args:
             self.if_handling()
 
-        if node.tag.value == "else":
+        if node.tag.value == "else" and not self.is_inside_args:
             self.else_handling()
 
-        if node.tag.value == "for":
+        if node.tag.value == "for" and not self.is_inside_args:
             self.for_handling()
 
-        if node.tag.value in ["to", "downto"]:
+        if node.tag.value in ["to", "downto"] and not self.is_inside_args:
             expression_string = self.parse_expression(right_terminals)
             self.for_parts["second"] += expression_string
 
-        if node.tag.value == "while":
+        if node.tag.value == "while" and not self.is_inside_args:
             self.is_inside_command = True
             self.while_handling()
 
-        if node.tag.value == "repeat":
+        if node.tag.value == "repeat" and not self.is_inside_args:
             self.repeat_handling()
 
-        if node.tag.value == "until":
+        if node.tag.value == "until" and not self.is_inside_args:
             self.until_handling()
 
-        if node.tag.value == "id" and not self.is_inside_command:
+        if node.tag.value == "id" and not self.is_inside_command and not self.is_in_string_in_args:
             if self.is_inside_args or self.is_func():
                 id_name = node.token.value
                 if self.is_func():
@@ -161,20 +163,28 @@ namespace Transpiler
 
         if self.is_inside_args or self.is_func():
             if node.tag is Tag.QUOTE and not self.is_inside_command:
+                self.is_in_string_in_args = not self.is_in_string_in_args
+                if not self.is_in_string_in_args:
+                    self.main_code += " ".join(self.string_nodes_value)
+                    self.string_nodes_value = []
                 self.main_code += "\""
 
-            if node.tag is Tag.COMMA and not self.is_inside_command:
-                self.main_code += ', '
+            if self.is_in_string_in_args and node.tag != Tag.QUOTE:
+                self.string_nodes_value.append(node.token.value)
+            else:
+                if node.tag is Tag.COMMA and not self.is_inside_command:
+                    self.main_code += ', '
 
-            if node.tag in [Tag.MATH_OPERATOR] and not self.is_inside_command:
-                self.main_code += f' {node.token.value} '
+                if node.tag in [Tag.MATH_OPERATOR, Tag.COMPARE] and not self.is_inside_command:
+                    self.main_code += f' {node.token.value} '
 
-            if node.tag in [Tag.BOOLEAN_OPERATOR] and not self.is_inside_command:
-                sharp_operator = SharpOperators.operator_to_sharp(node.token.value)
-                self.main_code += f' {sharp_operator} '
+                if node.tag in [Tag.BOOLEAN_OPERATOR] and not self.is_inside_command:
+                    sharp_operator = SharpOperators.operator_to_sharp(node.token.value)
+                    self.main_code += f' {sharp_operator} '
 
-            if not self.is_inside_command and node.tag in [Tag.LBRACKET, Tag.RBRACKET, Tag.NUMBER_FLOAT, Tag.NUMBER_INT, Tag.BOOLEAN_VALUE]:
-                self.main_code += node.token.value
+                if not self.is_inside_command and node.tag in [Tag.LBRACKET, Tag.RBRACKET, Tag.NUMBER_FLOAT,
+                                                               Tag.NUMBER_INT, Tag.BOOLEAN_VALUE]:
+                    self.main_code += node.token.value
 
         if node.tag is Tag.RBRACKET and node.parent.tag is NT.CALL:
             self.current_call_args_scope -= 1
