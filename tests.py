@@ -2029,8 +2029,11 @@ class WorkingGrammarTestCase(TestCase):
                 
                 var c: boolean := true;
                 var c1: boolean := (true and false) or (10 < 15) and ('lol' <> 'kek') or (a1 = b1);
+                
                 var d: char := 'd';
+                
                 var e: string := 'string';
+                var e1: string := 'string' + 'false' + 'for if else while' + 'e' + e;
             end.
         """, "",
         """
@@ -2043,6 +2046,7 @@ class WorkingGrammarTestCase(TestCase):
             bool c1 = (true && false) || (10 < 15) && ("lol" != "kek") || (a1 == b1);
             char d = 'd';
             string e = "string";
+            string e1 = "string" + "false" + "for if else while" + "e" + e;
         }
         """)
 
@@ -2464,17 +2468,19 @@ namespace Transpiler
         #     end.
         # """
 
-        # code = """
-        #     begin
-        #         var b: boolean := not (true) and not (false or true);
-        #         var b1: boolean := sqrt(not (true));
-        #         abs(not (true), 'true not false');
-        #     end.
-        # """
-        #
-        # lexer = self.get_lexer(code)
-        # sa = self.get_syntax_analyzer()
-        # tree = sa.parse(lexer.tokens)
-        # sem_an = self.get_semantic_analyzer(tree)
-        # code_result = sem_an.parse()
-        # print(code_result)
+        code = """
+            begin
+                var s: string := '+-*and' + 'asddsa';
+                var s1: string := 'for else' + 'asddsa';
+                var s2: string := 'True' + 'asddsa';
+                
+                print('+for');
+            end.
+        """
+
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree)
+        code_result = sem_an.parse()
+        print(code_result)

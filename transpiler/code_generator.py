@@ -78,6 +78,7 @@ class CodeGenerator:
         self.is_inline_if = False
         self.is_char_declaration = False
         self.is_in_string_in_args = False
+        self.is_in_string = False
 
         self.main_template = """
 {0}
@@ -99,11 +100,14 @@ namespace Transpiler
         self.current_scope = current_scope
         self.right_terminals = right_terminals
         self.tabs = " " * 8 + (" " * 4) * current_scope
+        if node.tag is Tag.QUOTE and not self.is_inside_args:
+            self.is_in_string = not self.is_in_string
+
         if node.tag is Tag.LBRACKET and node.parent.tag is NT.CALL:
             self.current_call_args_scope += 1
             self.is_inside_args = True
 
-        if node.token.value in [";", "then", "do"] and not self.is_inside_args:
+        if node.token.value in [";", "then", "do"] and not self.is_inside_args and not self.is_in_string:
             self.is_inside_command = False
             if node.token.value == ";":
                 if self.is_global_vars:
@@ -117,37 +121,37 @@ namespace Transpiler
                                                             self.for_parts["second"],
                                                             self.for_parts["third"])
 
-        if node.token.value == "begin" and not self.is_inside_args:
+        if node.token.value == "begin" and not self.is_inside_args and not self.is_inside_command:
             self.is_global_vars = False
             self.main_code += self.tabs + "{\n"
 
-        if node.token.value == "end" and not self.is_inside_args:
+        if node.token.value == "end" and not self.is_inside_args and not self.is_inside_command:
             self.main_code += self.tabs + "}\n"
 
-        if node.tag.value == "var" and not self.is_inside_args:
+        if node.tag.value == "var" and not self.is_inside_args and not self.is_inside_command:
             self.var_handling()
 
-        if node.tag.value == "if" and not self.is_inside_args:
+        if node.tag.value == "if" and not self.is_inside_args and not self.is_inside_command:
             self.if_handling()
 
-        if node.tag.value == "else" and not self.is_inside_args:
+        if node.tag.value == "else" and not self.is_inside_args and not self.is_inside_command:
             self.else_handling()
 
-        if node.tag.value == "for" and not self.is_inside_args:
+        if node.tag.value == "for" and not self.is_inside_args and not self.is_inside_command:
             self.for_handling()
 
-        if node.tag.value in ["to", "downto"] and not self.is_inside_args:
+        if node.tag.value in ["to", "downto"] and not self.is_inside_args and not self.is_inside_command:
             expression_string = self.parse_expression(right_terminals)
             self.for_parts["second"] += expression_string
 
-        if node.tag.value == "while" and not self.is_inside_args:
+        if node.tag.value == "while" and not self.is_inside_args and not self.is_inside_command:
             self.is_inside_command = True
             self.while_handling()
 
-        if node.tag.value == "repeat" and not self.is_inside_args:
+        if node.tag.value == "repeat" and not self.is_inside_args and not self.is_inside_command:
             self.repeat_handling()
 
-        if node.tag.value == "until" and not self.is_inside_args:
+        if node.tag.value == "until" and not self.is_inside_args and not self.is_inside_command:
             self.until_handling()
 
         if node.tag.value == "id" and not self.is_inside_command and not self.is_in_string_in_args:
@@ -207,7 +211,7 @@ namespace Transpiler
         var_expr = self.right_terminals
 
         if var_type == "char":
-            self.is_char_declaration = True;
+            self.is_char_declaration = True
 
         if self.is_inside_for_declaration:
             var_expr = self.vars_dict[self.current_scope][self.siblings[1].token.value]['expr']
@@ -315,6 +319,7 @@ namespace Transpiler
         slices = []
         counter = 0
 
+        # добавить игнор для строк
         terminals = []
         for terminal in var_expr:
             if terminal.token.value in SHARP_FUNCTIONS:
