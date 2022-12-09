@@ -369,5 +369,6 @@ SHARP_FUNCTIONS = {
     "print": "Console.WriteLine",
     "sqrt": "Sqrt",
     "exp": "Exp",
-    "sqr": "Sqr"
+    "sqr": "Pow",
+    "abs": "Abs"
 }

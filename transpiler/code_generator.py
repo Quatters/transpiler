@@ -178,6 +178,9 @@ namespace Transpiler
                 if node.tag in [Tag.MATH_OPERATOR, Tag.COMPARE] and not self.is_inside_command:
                     self.main_code += f' {node.token.value} '
 
+                if node.tag is Tag.BOOLEAN_NOT:
+                    self.main_code += node.token.value
+
                 if node.tag in [Tag.BOOLEAN_OPERATOR] and not self.is_inside_command:
                     sharp_operator = SharpOperators.operator_to_sharp(node.token.value)
                     self.main_code += f' {sharp_operator} '
@@ -339,8 +342,11 @@ namespace Transpiler
 
                 if slices[i] == ",":
                     slices[i] = "".join(slices[i] + " ")
-                elif slices[i] in ['-', '+', '/', '*', 'and', 'or', '>', '<', '>=', '<=', '=', '<>']:
-                    slices[i] = " " + SharpOperators.operator_to_sharp(slices[i]) + " "
+                elif slices[i] in ['-', '+', '/', '*', 'and', 'or', 'not', '>', '<', '>=', '<=', '=', '<>']:
+                    if slices[i] == 'not':
+                        slices[i] = SharpOperators.operator_to_sharp(slices[i])
+                    else:
+                        slices[i] = " " + SharpOperators.operator_to_sharp(slices[i]) + " "
                 slices[i] = "".join(slices[i])
             elif self.is_char_declaration:
                 self.is_char_declaration = False

@@ -686,7 +686,8 @@ class WorkingGrammarTestCase(TestCase):
         globals = sem_an.code_generator.get_global_vars()
         main = sem_an.code_generator.get_main_code()
 
-        # print(code_result)
+        self.assertEqual(globals.strip(), valid_globals.strip(), f'\n{globals} != {valid_globals}')
+        self.assertEqual(main.strip(), valid_main.strip(), f'\n{main} != {valid_main}')
 
     def test_expressions_syntax(self):
         code = """
@@ -2017,20 +2018,49 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """, NotImplementedError)
 
+    def test_generator_vars(self):
+        self.check_generator("""
+            begin
+                var a: integer := 10;
+                var a1: integer := 10 + (15 * (100 - 5) - a + 19 * (10 + a));
+                
+                var b: real := 10.0;
+                var b1: real := 10.0 + b;
+                
+                var c: boolean := true;
+                var c1: boolean := (true and false) or (10 < 15) and ('lol' <> 'kek') or (a1 = b1);
+                var d: char := 'd';
+                var e: string := 'string';
+            end.
+        """, "",
+        """
+        {
+            int a = 10;
+            int a1 = 10 + (15 * (100 - 5) - a + 19 * (10 + a));
+            double b = 10.0;
+            double b1 = 10.0 + b;
+            bool c = true;
+            bool c1 = (true && false) || (10 < 15) && ("lol" != "kek") || (a1 == b1);
+            char d = 'd';
+            string e = "string";
+        }
+        """)
+
     def test_generator(self):
         template = """
-        {0}
-        namespace Transpiler
-        {{
-            internal class Program
-            {{
-                {1}
-                public static void Main(string[] args)
-                {2}
-            }}
-        }}
-        """
-        # можно сравнивать только параметры
+using System;
+using static System.Math;
+
+namespace Transpiler
+{{
+    internal class Program
+    {{
+{1}
+        public static void Main(string[] args)
+{2}
+    }}
+}}
+"""
 
         # code = """
         #     begin
@@ -2421,15 +2451,30 @@ class WorkingGrammarTestCase(TestCase):
         #     end.
         # """
 
-        code = """
-            begin
-                print('print for else + 10');
-            end.
-        """
+        # code = """
+        #     begin
+        #         print('print for else + 10');
+        #     end.
+        # """
+        #
 
-        lexer = self.get_lexer(code)
-        sa = self.get_syntax_analyzer()
-        tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
-        code_result = sem_an.parse()
-        print(code_result)
+        # code = """
+        #     begin
+        #         var a: integer := 10;
+        #     end.
+        # """
+
+        # code = """
+        #     begin
+        #         var b: boolean := not (true) and not (false or true);
+        #         var b1: boolean := sqrt(not (true));
+        #         abs(not (true), 'true not false');
+        #     end.
+        # """
+        #
+        # lexer = self.get_lexer(code)
+        # sa = self.get_syntax_analyzer()
+        # tree = sa.parse(lexer.tokens)
+        # sem_an = self.get_semantic_analyzer(tree)
+        # code_result = sem_an.parse()
+        # print(code_result)
