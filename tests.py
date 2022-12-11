@@ -2033,7 +2033,7 @@ class WorkingGrammarTestCase(TestCase):
                 var e: string := 'string';
                 var e1: string := 'string' + 'false' + 'for if else while' + 'e+1' + e;
 
-                sqrt('lol+', a + b);
+                sqrt('lol+', a + b, 10 < 15);
             end.
         """, "",
         """
@@ -2047,7 +2047,7 @@ class WorkingGrammarTestCase(TestCase):
             char d = 'd';
             string e = "string";
             string e1 = "string" + "false" + "for if else while" + "e+1" + e;
-            Sqrt("lol+", a + b);
+            Sqrt("lol+", a + b, 10 < 15);
         }
         """)
 
@@ -2062,14 +2062,88 @@ class WorkingGrammarTestCase(TestCase):
         }
         """)
 
-    def test_call_functions_generation(self):
         self.check_generator("""
             begin
-                print('var e: integer := print()', '+-/    *');
+                var a: string := 'lol' + 'kek begin';
+                a := 'var print()';
+            end.
+        """, "",
+         """
+         {
+             string a = "lol" + "kek begin";
+             a = "var print()";
+         }
+         """)
+
+    def test_call_functions_generator(self):
+        # self.check_generator("""
+        #     begin
+        #         print('var e: integer := print()', '+-/    *');
+        #     end.
+        # """, "", """
+        # {
+        #     Console.WriteLine("var e: integer := print()", "+-/    *");
+        # }
+        # """)
+
+        self.check_generator("""
+            begin
+                var b: boolean := 'var var var' <> 'var var';
+                sqrt('begin');
             end.
         """, "", """
         {
-            Console.WriteLine("var e: integer := print()", "+-/    *");
+            bool b = "var var var" != "var var";
+            Sqrt("begin");
+        }
+        """)
+
+        # self.check_generator("""
+        #     begin
+        #         var a: integer;
+        #         print();
+        #     end.
+        # """, "",
+        # """
+        # {
+        #     Console.WriteLine();
+        # }
+        # """)
+
+        self.check_generator("""
+        begin
+             if true then
+                 var j: integer := 10;
+    
+             if true then
+                 var a: string := 'else'
+             else if false then
+                 var b: integer := 15
+             else
+                 var c: integer := 20;
+    
+             var g3: integer;
+             var g4: integer := 100;
+             g4 := 110;
+    
+             if true then
+                 var t1: integer := 10 + 5;
+        end.
+        """, "", """
+        {
+            if (true)
+                int j = 10;
+            if (true)
+                string a = "else";
+            else if (false)
+                int b = 15;
+            else
+                int c = 20;
+            int g3;
+            int g4 = 100;
+            g4 = 110;
+            if (true)
+                int t1 = 10 + 5;
         }
         """)
 
