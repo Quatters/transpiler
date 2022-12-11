@@ -1,5 +1,5 @@
 from transpiler.tree import Node
-from transpiler.settings import Tag, NT, SHARP_FUNCTIONS
+from transpiler.settings import Tag, NT, SHARP_TOKENS
 
 
 class SharpVarType:
@@ -22,33 +22,10 @@ class SharpVarType:
         if pas_type == "boolean":
             return cls.BOOL
 
-
-class SharpOperators:
-    COMPARE = "=="
-    NOTCOMPARE = "!="
-    AND = "&&"
-    OR = "||"
-    NOT = "!"
-
-    @classmethod
-    def operator_to_sharp(cls, pas_operator):
-        if pas_operator == "=":
-            return cls.COMPARE
-        if pas_operator == "<>":
-            return cls.NOTCOMPARE
-        if pas_operator == "and":
-            return cls.AND
-        if pas_operator == "or":
-            return cls.OR
-        if pas_operator == "not":
-            return cls.NOT
-        else:
-            return pas_operator
-
-
 class CodeGenerator:
 
-    def __init__(self):
+    def __init__(self, source_code: str):
+        self.source_code = source_code
         self.node = None
         self.vars_dict = {}
         self.siblings = []
@@ -109,6 +86,7 @@ namespace Transpiler
 
         if node.token.value in [";", "then", "do"] and not self.is_inside_args and not self.is_in_string:
             self.is_inside_command = False
+            self.is_char_declaration = False
             if node.token.value == ";":
                 if self.is_global_vars:
                     self.global_vars += ";\n"
@@ -158,7 +136,7 @@ namespace Transpiler
             if self.is_inside_args or self.is_func():
                 id_name = node.token.value
                 if self.is_func():
-                    id_name = SHARP_FUNCTIONS[node.token.value]
+                    id_name = SHARP_TOKENS.get(node.token.value, node.token.value)
                 if self.current_call_args_scope == 0:
                     self.main_code += self.tabs + ' ' * 4
                 self.main_code += id_name
@@ -186,7 +164,7 @@ namespace Transpiler
                     self.main_code += node.token.value
 
                 if node.tag in [Tag.BOOLEAN_OPERATOR] and not self.is_inside_command:
-                    sharp_operator = SharpOperators.operator_to_sharp(node.token.value)
+                    sharp_operator = SHARP_TOKENS.get(node.token.value, node.token.value)
                     self.main_code += f' {sharp_operator} '
 
                 if not self.is_inside_command and node.tag in [Tag.LBRACKET, Tag.RBRACKET, Tag.NUMBER_FLOAT,
@@ -315,51 +293,106 @@ namespace Transpiler
 
     def parse_expression(self, var_expr) -> str:
 
-        indexes = []
-        slices = []
-        counter = 0
+        # indexes = []
+        # slices = []
+        # counter = 0
+        #
+        # # добавить игнор для строк
+        # terminals = []
+        # for terminal in var_expr:
+        #     if terminal.token.value in SHARP_FUNCTIONS:
+        #         terminals.append(SHARP_FUNCTIONS[terminal.token.value])
+        #     elif terminal.token.value.lower() in ['true', 'false']:
+        #         terminals.append(terminal.token.value.lower())
+        #     else:
+        #         terminals.append(terminal.token.value)
+        #
+        # for i in range(len(terminals)):
+        #     if terminals[i] == "'":
+        #         indexes.append(i)
+        #         counter += 1
+        #
+        #     if counter == 2:
+        #         counter = 0
+        #         slices.append(terminals[indexes[-2] + 1:indexes[-1]])
+        #
+        #     if counter == 0 and terminals[i] != "'":
+        #         slices.append(terminals[i])
+        #
+        # for i in range(len(slices)):
+        #     if isinstance(slices[i], str):
+        #         # if slices[i] == ""
+        #
+        #         if slices[i] == ",":
+        #             slices[i] = "".join(slices[i] + " ")
+        #         elif slices[i] in ['-', '+', '/', '*', 'and', 'or', 'not', '>', '<', '>=', '<=', '=', '<>']:
+        #             if slices[i] == 'not':
+        #                 slices[i] = SharpOperators.operator_to_sharp(slices[i])
+        #             else:
+        #                 slices[i] = " " + SharpOperators.operator_to_sharp(slices[i]) + " "
+        #         slices[i] = "".join(slices[i])
+        #     elif self.is_char_declaration:
+        #         self.is_char_declaration = False
+        #         slices[i] = "\'" + " ".join(slices[i]) + "\'"
+        #     else:
+        #         slices[i] = "\"" + " ".join(slices[i]) + "\""
+        #
+        # return "".join(slices)
 
         # добавить игнор для строк
-        terminals = []
-        for terminal in var_expr:
-            if terminal.token.value in SHARP_FUNCTIONS:
-                terminals.append(SHARP_FUNCTIONS[terminal.token.value])
-            elif terminal.token.value.lower() in ['true', 'false']:
-                terminals.append(terminal.token.value.lower())
+        # terminals = []
+        # for terminal in var_expr:
+        #     if terminal.token.value in SHARP_FUNCTIONS:
+        #         terminals.append(SHARP_FUNCTIONS[terminal.token.value])
+        #     elif terminal.token.value.lower() in ['true', 'false']:
+        #         terminals.append(terminal.token.value.lower())
+        #     else:
+        #         terminals.append(terminal.token.value)
+
+        # for i in range(len(terminals)):
+        #     if terminals[i] == "'":
+        #         indexes.append(i)
+        #         counter += 1
+        #
+        #     if counter == 2:
+        #         counter = 0
+        #         slices.append(terminals[indexes[-2] + 1:indexes[-1]])
+        #
+        #     if counter == 0 and terminals[i] != "'":
+        #         slices.append(terminals[i])
+
+        quote_flag = False
+        result = []
+        for i, terminal in enumerate(self.right_terminals):
+            if quote_flag:
+                if terminal.tag is Tag.QUOTE:
+                    quote_flag = False
+                continue
+            if terminal.tag is Tag.QUOTE:
+                result.append(self.get_string(terminal))
+                quote_flag = True
             else:
-                terminals.append(terminal.token.value)
+                result.append(self.to_sharp(terminal))
 
-        for i in range(len(terminals)):
-            if terminals[i] == "'":
-                indexes.append(i)
-                counter += 1
+        return "".join(result)
 
-            if counter == 2:
-                counter = 0
-                slices.append(terminals[indexes[-2] + 1:indexes[-1]])
-
-            if counter == 0 and terminals[i] != "'":
-                slices.append(terminals[i])
-
-        for i in range(len(slices)):
-            if isinstance(slices[i], str):
-                # if slices[i] == ""
-
-                if slices[i] == ",":
-                    slices[i] = "".join(slices[i] + " ")
-                elif slices[i] in ['-', '+', '/', '*', 'and', 'or', 'not', '>', '<', '>=', '<=', '=', '<>']:
-                    if slices[i] == 'not':
-                        slices[i] = SharpOperators.operator_to_sharp(slices[i])
-                    else:
-                        slices[i] = " " + SharpOperators.operator_to_sharp(slices[i]) + " "
-                slices[i] = "".join(slices[i])
-            elif self.is_char_declaration:
-                self.is_char_declaration = False
-                slices[i] = "\'" + " ".join(slices[i]) + "\'"
-            else:
-                slices[i] = "\"" + " ".join(slices[i]) + "\""
-
-        return "".join(slices)
+    def to_sharp(self, node: Node):
+        if node.tag in [Tag.MATH_OPERATOR, Tag.BOOLEAN_OPERATOR, Tag.COMPARE]:
+            value = SHARP_TOKENS.get(node.token.value, node.token.value)
+            return f" {value} "
+        elif node.tag is Tag.BOOLEAN_NOT:
+            value = SHARP_TOKENS.get(node.token.value, node.token.value)
+            return f" {value}"
+        elif node.tag is Tag.COMMA:
+            return f"{node.token.value} "
+        else:
+            value = SHARP_TOKENS.get(node.token.value, node.token.value)
+            return value
+    def get_string(self, node: Node) -> str:
+        string = self.source_code[node.token.pos:self.source_code.index("'", node.token.pos)]
+        if self.is_char_declaration:
+            return f"'{string}'"
+        return f'"{string}"'
 
     def get_result(self):
         return self.main_template.format(self.libs, self.global_vars, self.main_code)

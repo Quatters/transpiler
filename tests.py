@@ -636,10 +636,7 @@ class SyntaxAnalyzerTestCase(TestCase):
 
 
 class WorkingGrammarTestCase(TestCase):
-    # For now there are not any asserts since testing parse tree is
-    # extremely routine task. Nevertheless, if something would break the lexer
-    # or syntax analyzer these tests will fail with their own exceptions.
-
+    maxDiff = None
     def get_lexer(self, code):
         lexer = Lexer(settings.Tag, settings.LEXER_RULES)
         lexer.buffer = code
@@ -649,8 +646,8 @@ class WorkingGrammarTestCase(TestCase):
         sa = SyntaxAnalyzer(settings.GRAMMAR_RULES)
         return sa
 
-    def get_semantic_analyzer(self, tree):
-        return SemanticAnalyzer(tree)
+    def get_semantic_analyzer(self, tree, source_code):
+        return SemanticAnalyzer(tree, source_code)
 
     def get_code_generator(self):
         raise NotImplementedError
@@ -680,7 +677,7 @@ class WorkingGrammarTestCase(TestCase):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
+        sem_an = self.get_semantic_analyzer(tree, code)
         code_result = sem_an.parse()
 
         globals = sem_an.code_generator.get_global_vars()
@@ -2023,17 +2020,19 @@ class WorkingGrammarTestCase(TestCase):
             begin
                 var a: integer := 10;
                 var a1: integer := 10 + (15 * (100 - 5) - a + 19 * (10 + a));
-                
+
                 var b: real := 10.0;
                 var b1: real := 10.0 + b;
-                
+
                 var c: boolean := true;
                 var c1: boolean := (true and false) or (10 < 15) and ('lol' <> 'kek') or (a1 = b1);
-                
+
                 var d: char := 'd';
-                
+
                 var e: string := 'string';
                 var e1: string := 'string' + 'false' + 'for if else while' + 'e+1' + e;
+                
+                sqrt('lol+', a + b);
             end.
         """, "",
         """
@@ -2046,7 +2045,19 @@ class WorkingGrammarTestCase(TestCase):
             bool c1 = (true && false) || (10 < 15) && ("lol" != "kek") || (a1 == b1);
             char d = 'd';
             string e = "string";
-            string e1 = "string" + "false" + "for if else while" + "e" + e;
+            string e1 = "string" + "false" + "for if else while" + "e+1" + e;
+            Sqrt("lol+", a + b);
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var a: string := 'lol' + 'kek';
+            end.
+        """, "",
+        """
+        {
+            string a = "lol" + "kek";
         }
         """)
 
@@ -2468,13 +2479,19 @@ namespace Transpiler
         #     end.
         # """
 
+        # code = """
+        #     begin
+        #         var s: string := '+-*and' + 'asddsa';
+        #         var s1: string := 'for else' + 'asddsa';
+        #         var s2: string := 'True' + 'asddsa';
+        #
+        #         print('+ for');
+        #     end.
+        # """
+
         code = """
             begin
-                var s: string := '+-*and' + 'asddsa';
-                var s1: string := 'for else' + 'asddsa';
-                var s2: string := 'True' + 'asddsa';
-                
-                print('+ for');
+                var a: string := 'lol+- */ kek';
             end.
         """
 

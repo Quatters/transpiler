@@ -365,10 +365,15 @@ GRAMMAR_RULES = [
 ]
 
 
-SHARP_FUNCTIONS = {
+SHARP_TOKENS = {
     "print": "Console.WriteLine",
     "sqrt": "Sqrt",
     "exp": "Exp",
     "sqr": "Pow",
-    "abs": "Abs"
+    "abs": "Abs",
+    "=": "==",
+    "<>": "!=",
+    "and": "&&",
+    "or": "||",
+    "not": "!"
 }

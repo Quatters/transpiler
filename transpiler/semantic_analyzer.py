@@ -393,11 +393,11 @@ class BooleanType(BaseType):
 
 
 class SemanticAnalyzer:
-    def __init__(self, tree: SyntaxTree, filepath: str | None = None):
+    def __init__(self, tree: SyntaxTree, source_code: str, filepath: str | None = None):
         self.tree = tree
         self.filepath = filepath
         self._visited_nodes = {}
-        self.code_generator = CodeGenerator()
+        self.code_generator = CodeGenerator(source_code)
 
         # 0 for global scope variables
         # 1 for nested if/for/while/until
