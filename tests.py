@@ -637,6 +637,7 @@ class SyntaxAnalyzerTestCase(TestCase):
 
 class WorkingGrammarTestCase(TestCase):
     maxDiff = None
+
     def get_lexer(self, code):
         lexer = Lexer(settings.Tag, settings.LEXER_RULES)
         lexer.buffer = code
@@ -656,7 +657,7 @@ class WorkingGrammarTestCase(TestCase):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
+        sem_an = self.get_semantic_analyzer(tree, code)
         code = sem_an.parse()
         return sem_an
 
@@ -2031,7 +2032,7 @@ class WorkingGrammarTestCase(TestCase):
 
                 var e: string := 'string';
                 var e1: string := 'string' + 'false' + 'for if else while' + 'e+1' + e;
-                
+
                 sqrt('lol+', a + b);
             end.
         """, "",
@@ -2058,6 +2059,17 @@ class WorkingGrammarTestCase(TestCase):
         """
         {
             string a = "lol" + "kek";
+        }
+        """)
+
+    def test_call_functions_generation(self):
+        self.check_generator("""
+            begin
+                print('var e: integer := print()', '+-/    *');
+            end.
+        """, "", """
+        {
+            Console.WriteLine("var e: integer := print()", "+-/    *");
         }
         """)
 

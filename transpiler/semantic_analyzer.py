@@ -479,6 +479,9 @@ class SemanticAnalyzer:
                         'message': 'multiple else blocks are not allowed'
                     }
 
+            elif node.tag is Tag.ID and self._is_func_call(node):
+                self.build_right_terminals_for_func_call(node)
+
             elif node.tag is NT.CALL_ARGS:
                 self.check_call_args_for_vars(node)
             elif node.tag in [NT.DEFINE_VAR,
@@ -497,6 +500,11 @@ class SemanticAnalyzer:
                 self.current_scope += 1
                 self.else_flag = False
             self.should_clear_vars_dict = False
+
+    def build_right_terminals_for_func_call(self, func_id_node: Node):
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(func_id_node.parent.children[1].children[0], callback=self._collect_right_terminals)
 
     def check_call_args_for_vars(self, call_args_node: Node):
         if call_args_node.children:
