@@ -2373,8 +2373,8 @@ class WorkingGrammarTestCase(TestCase):
                 c := g1 and true;
             end.
         """, """
-        bool g1 = true && false || true;
-        double g2 = 15.5 / 10.0;
+        static bool g1 = true && false || true;
+        static double g2 = 15.5 / 10.0;
         """, """
         {
             int a = 10 + 12;

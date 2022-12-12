@@ -154,11 +154,11 @@ namespace Transpiler
 
         elif self.is_global_vars:
             if len(var_expr) == 0:
-                self.global_vars += " " * 8 + self.define_var_without_value(var_type, var_name)
+                self.global_vars += " " * 8 + "static " + self.define_var_without_value(var_type, var_name)
             else:
-                self.global_vars += " " * 8 + self.define_var_with_value(var_type,
-                                                                         var_name,
-                                                                         right_terminals)
+                self.global_vars += " " * 8 + "static " + self.define_var_with_value(var_type,
+                                                                                     var_name,
+                                                                                     right_terminals)
         else:
             if len(var_expr) == 0:
                 self.main_code += self.tabs + " " * 4 + self.define_var_without_value(var_type, var_name)
