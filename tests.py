@@ -666,7 +666,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
 
-        sem_an = self.get_semantic_analyzer(tree)
+        sem_an = self.get_semantic_analyzer(tree, code)
         with self.assertRaises(err) as error:
             sem_an.parse()
         if msg is not None:
@@ -2016,7 +2016,7 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """, NotImplementedError)
 
-    def test_generator_vars(self):
+    def test_vars_generator(self):
         self.check_generator("""
             begin
                 var a: integer := 10;
@@ -2068,64 +2068,150 @@ class WorkingGrammarTestCase(TestCase):
                 a := 'var print()';
             end.
         """, "",
-         """
-         {
-             string a = "lol" + "kek begin";
-             a = "var print()";
-         }
-         """)
-
-    def test_call_functions_generator(self):
-        # self.check_generator("""
-        #     begin
-        #         print('var e: integer := print()', '+-/    *');
-        #     end.
-        # """, "", """
-        # {
-        #     Console.WriteLine("var e: integer := print()", "+-/    *");
-        # }
-        # """)
-
-        self.check_generator("""
-            begin
-                var b: boolean := 'var var var' <> 'var var';
-                sqrt('begin');
-            end.
-        """, "", """
+        """
         {
-            bool b = "var var var" != "var var";
-            Sqrt("begin");
+            string a = "lol" + "kek begin";
+            a = "var print()";
         }
         """)
 
-        # self.check_generator("""
-        #     begin
-        #         var a: integer;
-        #         print();
-        #     end.
-        # """, "",
-        # """
-        # {
-        #     Console.WriteLine();
-        # }
-        # """)
+        self.check_generator("""
+            begin
+                var a: integer := ((10 + 1) * 3) - 100;
+                var b: boolean := not (true);
+            end.
+        """, "", """
+        {
+            int a = ((10 + 1) * 3) - 100;
+            bool b = !(true);
+        }
+        """)
+
+    def test_while_generator(self):
+
+        self.check_generator("""
+            begin
+                while true do
+                    var a: integer := 10;
+
+                var b: integer := 10;
+            end.
+        """, "", """
+        {
+            while (true)
+                int a = 10;
+            int b = 10;
+        }
+        """)
+
+    def test_repeat_generator(self):
+
+        self.check_generator("""
+            begin
+                repeat
+                    var a: integer := 1;
+                until true;
+
+                var b: integer := 10;
+            end.
+        """, "", """
+        {
+            do {
+                int a = 1;
+            } while (true);
+            int b = 10;
+        }
+        """)
+
+    def test_for_loop_generator(self):
+        self.check_generator("""
+            begin
+                for var i: integer := 0 to 3 do
+                    var g: boolean := true;
+            end.
+        """, "", """
+        {
+            for (int i = 0; i <= 3; i++)
+                bool g = true;
+        } 
+        """)
+
+        self.check_generator("""
+            begin
+                for var i: integer := 0 to 3 do
+                begin
+                    var g: boolean := true;
+                end;
+            end.
+        """, "", """
+        {
+            for (int i = 0; i <= 3; i++)
+            {
+                bool g = true;
+            }
+        } 
+        """)
+
+        self.check_generator("""
+            begin
+                for var i: integer := 0 to 3 do
+                begin
+                    for var j: integer := i + 1 to 10 do
+                    begin
+                        print('to downto for i j');
+                        var a: boolean := TRUE and False;
+                    end;
+                end;
+            end.
+        """, "", """
+        {
+            for (int i = 0; i <= 3; i++)
+            {
+                for (int j = i + 1; j <= 10; j++)
+                {
+                    Console.WriteLine("to downto for i j");
+                    bool a = true && false;
+                }
+            }
+        } 
+        """)
+
+        self.check_generator("""
+            begin
+                for var i: integer := 10 downto 3 do
+                begin
+                    for var j: integer := 15 downto i do
+                        sqrt(j);
+                end;
+            end.
+        """, "", """
+        {
+            for (int i = 10; i >= 3; i--)
+            {
+                for (int j = 15; j >= i; j--)
+                    Sqrt(j);
+            }
+        } 
+        """)
+
+    def test_if_generator(self):
 
         self.check_generator("""
         begin
              if true then
                  var j: integer := 10;
-    
+
              if true then
                  var a: string := 'else'
              else if false then
                  var b: integer := 15
              else
                  var c: integer := 20;
-    
+
              var g3: integer;
              var g4: integer := 100;
              g4 := 110;
-    
+
              if true then
                  var t1: integer := 10 + 5;
         end.
@@ -2147,443 +2233,154 @@ class WorkingGrammarTestCase(TestCase):
         }
         """)
 
-    def test_generator(self):
-        template = """
-using System;
-using static System.Math;
-
-namespace Transpiler
-{{
-    internal class Program
-    {{
-{1}
-        public static void Main(string[] args)
-{2}
-    }}
-}}
-"""
-
-        # code = """
-        #     begin
-        #         var a: integer := 10;
-        #         if true then
-        #             a := 20;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a: integer := 10;
-        #         a := 15 + 20 + 30;
-        #     end.
-        # """
-
-
-        # code = """
-        #     begin
-        #         var a: integer := ((10 + 1) * 3) - 100;
-        #         var b: boolean := not (true);
-        #     end.
-        # """
-
-        # self.check_not_fails("""
-        #     begin
-        #       for var i: integer := 0 to 3 do
-        #       begin
-        #         var g: boolean := true;
-        #       end;
-        #       var g: boolean := true;
-        #     end.
-        # """)
-
-        # self.check_not_fails("""
-        #     begin
-        #         var a: integer := 10;
-        #         for var i: integer := 1 + a to a do
-        #             print(i);
-        #     end.
-        # """)
-
-        # code = """
-        #     begin
-        #         var a: integer := 10;
-        #         a := 10;
-        #         print(a);
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a : integer := 10;
-        #         print(10, 15, 'asd');
-        #     end.
-        # """
-
-
-        # code = """
-        #     begin
-        #         var lol4: integer := 1;
-        #         var lol3: integer := lol4 + sqrt(10, sqrt(sqrt(sqrt(0)))) + lol4 + 1;
-        #         print(lol4 + sqrt(10, sqrt(sqrt(sqrt('lol')))), lol3 + lol4);
-        #
-        #         var s: string := 'a' + 'asd';
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a: integer := 10 + 15;
-        #         var s: string := 'asd sdf' + 'aasd';
-        #         var c: char := 's';
-        #
-        #         var b: boolean := 10 >= 15;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         if true then
-        #             var j: integer := 10;
-        #
-        #         if true then
-        #             var a: integer := 10
-        #         else if false then
-        #             var b: integer := 15
-        #         else
-        #             var c: integer := 20;
-        #
-        #
-        #
-        #         var g3: integer;
-        #         var g4: integer := 100;
-        #         g4 := 110;
-        #
-        #         if true then
-        #             var t1: integer := 10 + 5;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         if true then
-        #         begin
-        #             for var i: integer := 1 to 10 do
-        #             begin
-        #                 var a: integer := 10 + i;
-        #             end;
-        #         end;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a : integer := 10;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var asd : integer := 100;
-        #
-        #         if true then
-        #             var e: integer := 30;
-        #
-        #         if true then
-        #             var a: integer := 10
-        #         else
-        #             var b: integer := 15;
-        #
-        #         if true then
-        #         begin
-        #             var c: integer := 20;
-        #         end
-        #         else
-        #             var d: integer := 25;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         if true then
-        #         begin
-        #             if false then
-        #                 var a: integer := 10;
-        #         end;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         if true then
-        #             var a: integer;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         repeat
-        #             var a: integer := 1;
-        #         until true;
-        #
-        #         var b: integer := 10;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         while true do
-        #             var a: integer := 10;
-        #
-        #         var b: integer := 10;
-        #         var c: integer := 15;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         while true do
-        #             var a: integer := 10;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a: integer := 10;
-        #         var b: integer;
-        #         b := 15;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var c: integer := 15;
-        #         for var i: integer := 1 to c do
-        #             var a: integer;
-        #
-        #         for var i: integer := 10 downto 1 do
-        #             var g: string := 'asdgf' + 'fsdf';
-        #
-        #         var b: boolean := 15 > 10;
-        #
-        #         b := false;
-        #         if true and b then
-        #         begin
-        #             var a: integer:= 10;
-        #         end;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var b: boolean := 15 > 10;
-        #         b := false;
-        #         if true and b then
-        #         begin
-        #             var a: integer:= 10;
-        #         end;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a: integer := 10;
-        #         a := 15;
-        #         print('lol');
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         print('lol');
-        #     end.
-        # """
-
-        # self.check_not_fails("""
-        #     begin
-        #         var a: boolean := true = print(sqrt(10));
-        #     end.
-        # """)
-
-        # code = """
-        #     begin
-        #         var a1: integer := somefunc('some arg');
-        #         print('some text');
-        #
-        #         var a: real := 1 + sqrt(5);
-        #
-        #         var b: integer := func1(func2(1), 1);
-        #         var c: integer := func1(func2(func3(func4())));
-        #         var d: integer := func1(func2(func3(c, b))) + func1();
-        #         var e: integer :=
-        #             func1(func2(func3(func4(5, sqrt(8))), sqrt(2)))
-        #             + func1(func2(func3(c, b))) + func1();
-        #
-        #         var lol: boolean := 1.2 > sqrt(2);
-        #         var lol2: boolean := sqrt(1) > sqrt(2);
-        #         var lol3: boolean := '__lol__' < 'kek';
-        #         var lol4: boolean := '' <> '' or '' >= '' or
-        #             '' <= '' or '' > '' or '' = '';
-        #
-        #         var lol5: integer := func1(1.1);
-        #         var lol6: integer := func1('');
-        #         var lol7: integer := func1(true);
-        #
-        #         var lol8: real := func1(True);
-        #         var lol9: real := func1('');
-        #
-        #         var lol10: boolean := func1(1);
-        #         var lol11: boolean := func1(1.1);
-        #         var lol12: boolean := func1('fds');
-        #
-        #         var lol13: char := func1(1);
-        #         var lol14: char := func1(1.1);
-        #         var lol15: char := func1(false);
-        #         var lol16: char := func1('fds');
-        #
-        #         var lol17: string := func1(1);
-        #         var lol18: string := func1(1.1);
-        #         var lol19: string := func1(false);
-        #         var lol20: string := func1('fds');
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a: integer := print(print(True, False), 15);
-        #     end.
-        # """
-
-        # code = """
-        #     var g1: boolean := true;
-        #     var g2: real := 15.5;
-        #     begin
-        #         var a: integer := 10 + 12;
-        #         var b: integer := 5 * 9;
-        #         var c: boolean := a = b;
-        #         a := 15 + 30;
-        #         c := g1 and true;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var b: boolean := true and false or false = true <> false;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var b: boolean := 'asd' = ('asd' = 'asd') and true;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var c: string := 'asdads' + 'asd ads' + 'asdf' + 'dfg';
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var a: integer := 10 + 19;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var b: boolean := 'asd' = ('sgsd' + ('asd' + 'sdf'));
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var b: boolean := 'ad' = ('ads' + 'ad');
-        #     end.
-        # """
-
-        # self.check_not_fails("""
-        #     begin
-        #         var c: string := '\n';
-        #     end.
-        # """)
-
-        # self.check_not_fails("""
-        #     var a: integer := 10;
-        #     a := 15;
-        #     begin
-        #         var c: char := 'c' + 'asd';
-        #     end.
-        # """)
-
-        # code = """
-        #     begin
-        #         var a: integer := 10 + (5 * 4);
-        #         var b: real := 10.0;
-        #         var c: char := 'a';
-        #         var d: string := 'str';
-        #         var e: boolean := true;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var b: boolean := 'a' <> 'c';
-        #     end.
-        # """
-
-        #
-        # code = """
-        #     begin
-        #         for var i: integer := 1 to 3 do
-        #             print(i);
-        #     end.
-        # """
-        #
-        # code = """
-        #     begin
-        #         var i: integer;
-        #         i := 10;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         print('print for else + 10');
-        #     end.
-        # """
-        #
-
-        # code = """
-        #     begin
-        #         var a: integer := 10;
-        #     end.
-        # """
-
-        # code = """
-        #     begin
-        #         var s: string := '+-*and' + 'asddsa';
-        #         var s1: string := 'for else' + 'asddsa';
-        #         var s2: string := 'True' + 'asddsa';
-        #
-        #         print('+ for');
-        #     end.
-        # """
-
-        code = """
+        self.check_generator("""
             begin
-                var a: string := 'lol+- */ kek';
-            end.
-        """
+                if true then
+                    var j: integer := 10;
 
-        lexer = self.get_lexer(code)
-        sa = self.get_syntax_analyzer()
-        tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
-        code_result = sem_an.parse()
-        print(code_result)
+                if true then
+                    var a: integer := 10
+                else if false then
+                    var b: integer := 15
+                else
+                    var c: integer := 20;
+
+                if true then
+                    var t1: integer := 10 + 5;
+            end.
+        """, "", """
+        {
+            if (true)
+                int j = 10;
+            if (true)
+                int a = 10;
+            else if (false)
+                int b = 15;
+            else
+                int c = 20;
+            if (true)
+                int t1 = 10 + 5;
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                if true then
+                begin
+                    for var i: integer := 1 to 10 do
+                    begin
+                        var a: integer := 10 + i;
+                    end;
+                end;
+            end.
+        """, "", """
+        {
+            if (true)
+            {
+                for (int i = 1; i <= 10; i++)
+                {
+                    int a = 10 + i;
+                }
+            }
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var asd : integer := 100;
+
+                if true then
+                    var e: integer := 30;
+
+                if true then
+                    var a: integer := 10
+                else
+                    var b: integer := 15;
+
+                if true then
+                begin
+                    var c: integer := 20;
+                end
+                else
+                    var d: integer := 25;
+            end.
+        """, "", """
+        {
+            int asd = 100;
+            if (true)
+                int e = 30;
+            if (true)
+                int a = 10;
+            else
+                int b = 15;
+            if (true)
+            {
+                int c = 20;
+            }
+            else
+                int d = 25;
+        }
+        """)
+
+    def test_call_functions_generator(self):
+
+        self.check_generator("""
+            begin
+                print('var e: integer := print()', '+-/    *');
+            end.
+        """, "", """
+        {
+            Console.WriteLine("var e: integer := print()", "+-/    *");
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var b: boolean := 'var var var' <> 'var var';
+                sqrt('begin');
+            end.
+        """, "", """
+        {
+            bool b = "var var var" != "var var";
+            Sqrt("begin");
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var a: integer;
+                print();
+            end.
+        """, "",
+        """
+        {
+            int a;
+            Console.WriteLine();
+        }
+        """)
+
+
+    def test_global_vars_generator(self):
+
+        self.check_generator("""
+            var g1: boolean := true and false or TRUE;
+            var g2: real := 15.5 / 10.0;
+            begin
+                var a: integer := 10 + 12;
+                var b: integer := 5 * 9;
+                var c: boolean := a = b;
+                a := 15 + 30;
+                c := g1 and true;
+            end.
+        """, """
+        bool g1 = true && false || true;
+        double g2 = 15.5 / 10.0;
+        """, """
+        {
+            int a = 10 + 12;
+            int b = 5 * 9;
+            bool c = a == b;
+            a = 15 + 30;
+            c = g1 && true;
+        }
+        """)
