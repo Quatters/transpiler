@@ -176,14 +176,18 @@ namespace Transpiler
                                                                right_terminals)
         else:
             if len(var_expr) == 0:
-                self.main_code += self.tabs + " " * 4 + \
-                                  self.define_var_without_value(var_type,
-                                                                var_name)
+                self.main_code += self.tabs + " " * 4 \
+                    + self.define_var_without_value(
+                        var_type,
+                        var_name
+                    )
             else:
-                self.main_code += self.tabs + " " * 4 + \
-                                  self.define_var_with_value(var_type,
-                                                             var_name,
-                                                             right_terminals)
+                self.main_code += self.tabs + " " * 4 \
+                    + self.define_var_with_value(
+                        var_type,
+                        var_name,
+                        right_terminals
+                    )
 
     def if_handling(self, right_terminals):
         self.is_inside_command = True

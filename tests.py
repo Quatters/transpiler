@@ -2062,7 +2062,7 @@ class WorkingGrammarTestCase(TestCase):
             double b = 10.0;
             double b1 = 10.0 + b;
             bool c = true;
-            bool c1 = (true && false) || (10 < 15) && ("lol" != "kek") || (a1 == b1);
+            bool c1 = (true && false) || (1 < 5) && ("a" != "b") || (a1 == b1);
             char d = 'd';
             string e = "string";
             string e1 = "string" + "false" + "for if else while" + "e+1" + e;
