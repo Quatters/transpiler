@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+from pathlib import Path
 from transpiler.base import (
     Terminal,
     NonTerminal,
@@ -8,6 +9,8 @@ from transpiler.base import (
     GrammarRule,
     Special,
 )
+
+EXAMPLES_DIR = Path(__file__).parent.parent / 'examples'
 
 
 logging.basicConfig(

@@ -1,10 +1,10 @@
 import traceback
 from fastapi.responses import HTMLResponse
 from transpiler.base import TranspilerError
+from transpiler import transpile
 from web import app
 from web.settings import STATIC_DIR
 from web.schemas import Code, TranspileResult
-from web.backend import transpile
 
 
 @app.get('/')
