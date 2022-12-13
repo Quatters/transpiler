@@ -568,7 +568,6 @@ class SemanticAnalyzer:
     def _assert_type_of_define_var(self, node: Node):
         left_var = node.children[1]
         self.assert_var_is_not_defined(left_var)
-        # self.save_var(left_var, type=node.children[3].token.value)
 
         optional_define_var_assignment_node = node.children[4]
         self.right_terminals = []

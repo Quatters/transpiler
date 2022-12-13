@@ -26,6 +26,19 @@ class SharpVarType(TranspilerEnum):
 
 class CodeGenerator:
 
+    main_template = """
+{0}
+namespace Transpiler
+{{
+    internal class Program
+    {{
+{1}
+        public static void Main(string[] args)
+{2}
+    }}
+}}
+"""
+
     def __init__(self, source_code: str):
         self.source_code = source_code
         self.node = None
@@ -53,19 +66,6 @@ class CodeGenerator:
         self.is_inside_for_declaration = False
         self.is_char_declaration = False
         self.is_in_string = False
-
-        self.main_template = """
-{0}
-namespace Transpiler
-{{
-    internal class Program
-    {{
-{1}
-        public static void Main(string[] args)
-{2}
-    }}
-}}
-"""
 
     def add_token(self, node: Node,
                   siblings: list[Node],

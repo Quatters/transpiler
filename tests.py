@@ -2121,6 +2121,34 @@ class WorkingGrammarTestCase(TestCase):
         }
         """)
 
+        self.check_generator("""
+            begin
+                while true or false do
+                begin
+                    while false and true do
+                    begin
+                        print('pep8');
+                        println('while begin end');
+                    end;
+                    var a: integer := 10;
+                    read();                
+                end;
+            end.
+        """, "", """
+        {
+            while (true || false)
+            {
+                while (false && true)
+                {
+                    Console.Write("pep8");
+                    Console.WriteLine("while begin end");
+                }
+                int a = 10;
+                Console.Read();
+            }
+        }
+        """)
+
     def test_repeat_generator(self):
 
         self.check_generator("""
@@ -2186,7 +2214,7 @@ class WorkingGrammarTestCase(TestCase):
             {
                 for (int j = i + 1; j <= 10; j++)
                 {
-                    Console.WriteLine("to downto for i j");
+                    Console.Write("to downto for i j");
                     bool a = true && false;
                 }
             }
@@ -2347,7 +2375,7 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """, "", """
         {
-            Console.WriteLine("var e: integer := print()", "+-/    *");
+            Console.Write("var e: integer := print()", "+-/    *");
         }
         """)
 
@@ -2372,7 +2400,7 @@ class WorkingGrammarTestCase(TestCase):
         """
         {
             int a;
-            Console.WriteLine();
+            Console.Write();
         }
         """)
 
