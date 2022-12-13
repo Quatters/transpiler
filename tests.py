@@ -2131,7 +2131,7 @@ class WorkingGrammarTestCase(TestCase):
                         println('while begin end');
                     end;
                     var a: integer := 10;
-                    read();                
+                    read();
                 end;
             end.
         """, "", """
