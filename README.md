@@ -1,6 +1,18 @@
 # Transpiler
 
-Transpiler from PascalABC.NET to C#.
+Transpiler from PascalABC.NET to C#. Includes transpiler module which performs
+all logic and a simple web interface to interact with.
+
+## Run in docker
+
+To run a docker container with web interface you can use following commands:
+
+```bash
+docker build . -t transpiler
+docker run -p 8000:8000 --rm transpiler
+```
+
+After that you can check [localhost:8000](http://localhost:8000).
 
 ## Known issues
 
@@ -32,7 +44,7 @@ var a := 'a';
 ```pascal
 // ok
 if true then
-begin 
+begin
     if true then
         print('str');
 end;
@@ -74,6 +86,14 @@ e.g.
 ```bash
 python -m transpiler examples/supported_syntax.pas
 ```
+
+Run `web` module with
+
+```bash
+python -m web --dev
+```
+
+where `--dev` sets uvicorn config suitable for development, e.g. use hot reload.
 
 Before submitting a pull request make sure that your code passes
 all tests and there are no `flake8` linter errors. Check it with

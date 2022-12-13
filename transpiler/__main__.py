@@ -1,21 +1,13 @@
 import sys
 from pathlib import Path
-from transpiler.lexer import Lexer
-from transpiler.syntax_analyzer import SyntaxAnalyzer
-from transpiler.semantic_analyzer import SemanticAnalyzer
-from transpiler.settings import Tag, LEXER_RULES, GRAMMAR_RULES
+from transpiler.settings import EXAMPLES_DIR
+from transpiler import transpile
 
 
 filepath = sys.argv[1]
+
 code = Path(filepath).read_text()
+sharp_code = transpile(code)
 
-lexer = Lexer(Tag, LEXER_RULES, filepath)
-lexer.buffer = code
-
-syntax_analyzer = SyntaxAnalyzer(GRAMMAR_RULES, filepath)
-tree = syntax_analyzer.parse(lexer.tokens)
-
-semantic_analyzer = SemanticAnalyzer(tree, code, filepath)
-sharp_code = semantic_analyzer.parse()
-
-print(sharp_code)
+new_filename = f'{filepath.rsplit("/", maxsplit=1)[-1]}.cs'
+(EXAMPLES_DIR / new_filename).write_text(sharp_code, encoding='utf-8')

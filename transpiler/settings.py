@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+from pathlib import Path
 from transpiler.base import (
     Terminal,
     NonTerminal,
@@ -8,6 +9,8 @@ from transpiler.base import (
     GrammarRule,
     Special,
 )
+
+EXAMPLES_DIR = (Path(__file__).parent.parent / 'examples').resolve().absolute()
 
 
 logging.basicConfig(
@@ -368,6 +371,8 @@ GRAMMAR_RULES = [
 SHARP_TOKENS = {
     "print": "Console.Write",
     "println": "Console.WriteLine",
+    "write": "Console.Write",
+    "writeln": "Console.WriteLine",
     "read": "Console.Read",
     "readln": "Console.ReadLine",
     "sqrt": "Math.Sqrt",

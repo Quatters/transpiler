@@ -8,11 +8,12 @@ from transpiler.base import (
     Special,
     Terminal,
     NonTerminal,
+    TranspilerError,
 )
 from transpiler.lexer import Lexer, UnexpectedTokenError
 from transpiler.syntax_analyzer import GrammarError, SyntaxAnalyzer
 from transpiler.semantic_analyzer import SemanticAnalyzer, SemanticError
-from transpiler import settings
+from transpiler import settings, transpile
 
 
 logger = logging.getLogger(__name__)
@@ -1975,35 +1976,36 @@ class WorkingGrammarTestCase(TestCase):
                 var a: integer := 1;
                 a += 1;
             end.
-        """, NotImplementedError)
+        """,
+        err=TranspilerError,
+        msg='+= at line 4 - operational assignments are not implemented yet')
 
         self.check_fails("""
             begin
                 var a: integer := 1;
                 a -= 1;
             end.
-        """, NotImplementedError)
+        """,
+        err=TranspilerError,
+        msg='-= at line 4 - operational assignments are not implemented yet')
 
         self.check_fails("""
             begin
                 var a: integer := 1;
                 a *= 1;
             end.
-        """, NotImplementedError)
+        """,
+        err=TranspilerError,
+        msg='*= at line 4 - operational assignments are not implemented yet')
 
         self.check_fails("""
             begin
                 var a: integer := 1;
                 a /= 1;
             end.
-        """, NotImplementedError)
-
-        self.check_fails("""
-            begin
-                var a: integer := 1;
-                a += true;
-            end.
-        """, NotImplementedError)
+        """,
+        err=TranspilerError,
+        msg='/= at line 4 - operational assignments are not implemented yet')
 
         self.check_not_fails("""
             begin
@@ -2017,7 +2019,9 @@ class WorkingGrammarTestCase(TestCase):
                 if (true) then
                     a *= 2;
             end.
-        """, NotImplementedError)
+        """,
+        err=TranspilerError,
+        msg='*= at line 5 - operational assignments are not implemented yet')
 
     def test_vars_generator(self):
 
@@ -2428,3 +2432,16 @@ class WorkingGrammarTestCase(TestCase):
             c = g1 && true;
         }
         """)
+
+
+class ExamplesTestCase(TestCase):
+    def test_supported_syntax(self):
+        pascal_code = (
+            settings.EXAMPLES_DIR / 'supported_syntax.pas'
+        ).read_text(encoding='utf-8')
+        sharp_code = (
+            settings.EXAMPLES_DIR / 'supported_syntax.pas.cs'
+        ).read_text(encoding='utf-8')
+
+        self.assertTrue(sharp_code.startswith('using System;'))
+        self.assertEqual(sharp_code, transpile(pascal_code))
