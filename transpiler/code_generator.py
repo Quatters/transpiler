@@ -34,7 +34,7 @@ class CodeGenerator:
         self.current_call_args_scope = 0
         self.tabs = ""
 
-        self.libs = "using System;\nusing static System.Math;\n"
+        self.libs = "using System;\n"
         self.global_vars = ""
         self.main_code = ""
 
@@ -201,9 +201,19 @@ namespace Transpiler
     def id_handling(self, right_terminals):
         self.is_inside_command = True
 
+        for i in range(self.current_scope, -1, -1):
+            scoped_vars = self.vars_dict.get(i)
+            if not scoped_vars:
+                continue
+            var_data = scoped_vars.get(self.node.token.value)
+            if not var_data:
+                continue
+            else:
+                if var_data["type"].value == "char":
+                    self.is_char_declaration = True
+
         assign_var = self.tabs + " " * 4 + "{0} = {1}"
         var_name = self.node.token.value
-        # var_expr = self.right_terminals
         expression_string = self.parse_expression(right_terminals)
         self.main_code += assign_var.format(var_name, expression_string)
 

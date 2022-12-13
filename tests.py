@@ -2017,6 +2017,19 @@ class WorkingGrammarTestCase(TestCase):
         """, NotImplementedError)
 
     def test_vars_generator(self):
+
+        self.check_generator("""
+            begin
+                var c: char := 'a';
+                c := 'c';
+            end.
+        """, "", """
+        {
+            char c = 'a';
+            c = 'c';
+        }
+        """)
+
         self.check_generator("""
             begin
                 var a: integer := 10;
@@ -2035,8 +2048,7 @@ class WorkingGrammarTestCase(TestCase):
 
                 sqrt('lol+', a + b, 10 < 15);
             end.
-        """, "",
-        """
+        """, "", """
         {
             int a = 10;
             int a1 = 10 + (15 * (100 - 5) - a + 19 * (10 + a));
@@ -2047,7 +2059,7 @@ class WorkingGrammarTestCase(TestCase):
             char d = 'd';
             string e = "string";
             string e1 = "string" + "false" + "for if else while" + "e+1" + e;
-            Sqrt("lol+", a + b, 10 < 15);
+            Math.Sqrt("lol+", a + b, 10 < 15);
         }
         """)
 
@@ -2067,8 +2079,7 @@ class WorkingGrammarTestCase(TestCase):
                 var a: string := 'lol' + 'kek begin';
                 a := 'var print()';
             end.
-        """, "",
-        """
+        """, "", """
         {
             string a = "lol" + "kek begin";
             a = "var print()";
@@ -2189,7 +2200,7 @@ class WorkingGrammarTestCase(TestCase):
             for (int i = 10; i >= 3; i--)
             {
                 for (int j = 15; j >= i; j--)
-                    Sqrt(j);
+                    Math.Sqrt(j);
             }
         } 
         """)
@@ -2342,7 +2353,7 @@ class WorkingGrammarTestCase(TestCase):
         """, "", """
         {
             bool b = "var var var" != "var var";
-            Sqrt("begin");
+            Math.Sqrt("begin");
         }
         """)
 
@@ -2358,7 +2369,6 @@ class WorkingGrammarTestCase(TestCase):
             Console.WriteLine();
         }
         """)
-
 
     def test_global_vars_generator(self):
 
