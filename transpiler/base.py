@@ -33,8 +33,6 @@ class Special(Symbol):
     LAMBDA = '__LAMBDA__'
     START = '__START__'
     LIMITER = '__LIMITER__'
-    ONE_LINE_COMMENT = '__ONE_LINE_COMMENT__'
-    MULTI_LINE_COMMENT = '__MULTI_LINE_COMMENT__'
 
 
 class Terminal(Symbol):

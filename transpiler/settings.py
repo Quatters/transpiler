@@ -60,6 +60,9 @@ class Tag(Terminal):
     PROCEDURE = 'procedure'
     FUNCTION = 'function'
 
+    ONE_LINE_COMMENT = '__ONE_LINE_COMMENT__'
+    MULTI_LINE_COMMENT = '__MULTI_LINE_COMMENT__'
+
 
 class NT(NonTerminal):
     VARS = 'VARS'
@@ -115,6 +118,8 @@ class NT(NonTerminal):
 
 
 LEXER_RULES = [
+    LexerRule(Tag.ONE_LINE_COMMENT, r'//.*\n'),
+    LexerRule(Tag.MULTI_LINE_COMMENT, r'\{[\d\D]*?\}'),
     LexerRule(Tag.TYPE_HINT, r'\binteger|real|boolean|char|string\b'),
     LexerRule(Tag.NUMBER_FLOAT, r'[\-\+]?\d+\.\d+'),
     LexerRule(Tag.NUMBER_INT, r'[\-\+]?\d+'),
@@ -154,11 +159,8 @@ LEXER_RULES = [
     LexerRule(Tag.COLON, r':'),
     LexerRule(Tag.COMMA, r','),
     LexerRule(Tag.DOT, r'\.'),
-    LexerRule(Tag.QUOTE, r"\'"),
-    LexerRule(Special.ONE_LINE_COMMENT, r"\/\/.*?"),
-    LexerRule(Special.MULTI_LINE_COMMENT, r"\{.*?\}")
+    LexerRule(Tag.QUOTE, r"\'")
 ]
-
 GRAMMAR_RULES = [
     GrammarRule(Special.START, {
         (NT.DEFINE_VARS_RECURSIVE, NT.PROG),

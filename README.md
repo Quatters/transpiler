@@ -4,7 +4,6 @@ Transpiler from PascalABC.NET to C#.
 
 ## Known issues
 
-* Comments aren't supported.
 * Operational assignments are not supported.
 
 ```pascal
