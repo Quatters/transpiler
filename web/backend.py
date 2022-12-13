@@ -10,8 +10,6 @@ def transpile(code: str):
 
     syntax_analyzer = SyntaxAnalyzer(GRAMMAR_RULES)
     tree = syntax_analyzer.parse(lexer.tokens)
+    semantic_analyzer = SemanticAnalyzer(tree, code)
 
-    semantic_analyzer = SemanticAnalyzer(tree)
-    semantic_analyzer.parse()
-
-    return 'dummy'
+    return semantic_analyzer.parse()
