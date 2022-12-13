@@ -10,7 +10,7 @@ from transpiler.base import (
     Special,
 )
 
-EXAMPLES_DIR = Path(__file__).parent.parent / 'examples'
+EXAMPLES_DIR = (Path(__file__).parent.parent / 'examples').resolve().absolute()
 
 
 logging.basicConfig(
