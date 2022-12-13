@@ -87,13 +87,19 @@ e.g.
 python -m transpiler examples/supported_syntax.pas
 ```
 
-Run `web` module with
+To run `web` module, install web dependencies first:
+
+```bash
+pip install -r requirements-web.txt
+```
+
+Then run it with
 
 ```bash
 python -m web --dev
 ```
 
-where `--dev` sets uvicorn config suitable for development, e.g. use hot reload.
+where `--dev` sets uvicorn config suitable for development, e.g. it configures hot reload.
 
 Before submitting a pull request make sure that your code passes
 all tests and there are no `flake8` linter errors. Check it with
