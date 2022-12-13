@@ -1,6 +1,7 @@
 from transpiler.tree import SyntaxTree, Node
 from transpiler.settings import Tag, NT
 from transpiler.base import TranspilerError, TranspilerEnum
+from transpiler.code_generator import CodeGenerator
 from abc import ABC
 
 
@@ -167,6 +168,8 @@ class PascalChar(PascalString):
 
 
 class BaseType(ABC):
+    is_in_func: bool = False
+
     @staticmethod
     def get_error_data(node: Node, expected_type: str):
         return {
@@ -186,13 +189,24 @@ class BaseType(ABC):
 
     @classmethod
     def check_node(cls, node: Node):
-        raise NotImplementedError
+        if cls.entered_func(node):
+            cls.is_in_func = True
+        elif cls.left_func(node):
+            cls.is_in_func = False
+
+    @classmethod
+    def entered_func(cls, node: Node) -> bool:
+        return node.tag is Tag.LBRACKET and node.parent.tag is NT.CALL
+
+    @classmethod
+    def left_func(cls, node: Node) -> bool:
+        return node.tag is Tag.RBRACKET and node.parent.tag is NT.CALL
 
     @classmethod
     def is_var(cls, node: Node):
         try:
             return node.parent.children[1].children[0].tag is not NT.CALL
-        except (IndexError):
+        except IndexError:
             return True
 
     @classmethod
@@ -221,7 +235,6 @@ class BaseType(ABC):
 
 
 class IntType(BaseType):
-    # учесть деление
     @classmethod
     def check_node(cls, node: Node):
         acceptable = [
@@ -231,11 +244,12 @@ class IntType(BaseType):
             Tag.RBRACKET,
             Tag.COMMA,
         ]
-        assert node.tag in acceptable \
-            and node.token.value != '/' \
-            or node.tag is Tag.ID \
-            and cls.is_var(node) and cls.is_type(node, [VarType.INTEGER]) \
-            or node.tag is Tag.ID and not cls.is_var(node), \
+        super().check_node(node)
+        assert cls.is_in_func or \
+            node.tag in acceptable and node.token.value != '/' \
+            or node.tag is Tag.ID and cls.is_var(node) \
+            and cls.is_type(node, [VarType.INTEGER]) \
+            or not cls.is_var(node), \
             cls.get_error_data(node, VarType.INTEGER)
 
 
@@ -250,11 +264,14 @@ class RealType(BaseType):
             Tag.RBRACKET,
             Tag.COMMA,
         ]
-        assert node.tag in acceptable \
+        super().check_node(node)
+        assert cls.is_in_func or \
+            node.tag in acceptable \
             or node.tag is Tag.ID \
             and cls.is_var(node) \
             and cls.is_type(node, [VarType.INTEGER, VarType.REAL]) \
-            or node.tag is Tag.ID and not cls.is_var(node), \
+            or node.tag is Tag.ID \
+            and not cls.is_var(node), \
             cls.get_error_data(node, VarType.REAL)
 
 
@@ -265,8 +282,8 @@ class CharType(BaseType):
         cls.current_scope = current_scope
 
         if expr[0].tag is Tag.ID:
-            assert cls.is_type(expr[0], [VarType.CHAR]) \
-                or not cls.is_var(expr[0]), \
+            assert not cls.is_var(expr[0]) \
+                or cls.is_type(expr[0], [VarType.CHAR]), \
                 cls.get_error_data(expr[0], VarType.CHAR)
         else:
             assert expr[0].tag == Tag.QUOTE, \
@@ -287,6 +304,9 @@ class StringType(BaseType):
 
     @classmethod
     def check_node(cls, node: Node):
+        super().check_node(node)
+        if cls.is_in_func or node.tag is Tag.RBRACKET:
+            return
         if node.tag == Tag.QUOTE:
             cls.is_string = not cls.is_string
         elif not cls.is_string:
@@ -362,16 +382,22 @@ class BooleanType(BaseType):
             str_expr = ' '.join(map(parse_node, cls.expr))
             internal_vars = {}
             exec(f'exec_result = {str_expr}', globals(), internal_vars)
-            assert isinstance(internal_vars['exec_result'], bool), error_data
+            assert isinstance(
+                internal_vars['exec_result'],
+                (bool, PascalAnyComparable)
+            ), error_data
         except TypeError:
             raise AssertionError(error_data)
 
 
 class SemanticAnalyzer:
-    def __init__(self, tree: SyntaxTree, filepath: str | None = None):
+    def __init__(self, tree: SyntaxTree,
+                 source_code: str,
+                 filepath: str | None = None):
         self.tree = tree
         self.filepath = filepath
         self._visited_nodes = {}
+        self.code_generator = CodeGenerator(source_code)
 
         # 0 for global scope variables
         # 1 for nested if/for/while/until
@@ -379,6 +405,7 @@ class SemanticAnalyzer:
         self.current_scope = 0
         self.vars_dict = {self.current_scope: {}}
         self.__is_in_string = False
+        self.right_terminals = []
 
         self.__is_in_string_perform_assertions = False
 
@@ -389,9 +416,8 @@ class SemanticAnalyzer:
     def parse(self):
         try:
             self.dfs(self.tree.root, callback=self.perform_assertions)
-            self.tree.is_semantically_correct = True
             self.tree.vars_dict = self.vars_dict
-            return self.tree
+            return self.code_generator.get_result()
         except AssertionError as error:
             node = error.args[0]["node"]
             if not isinstance(node.tag, Tag):
@@ -429,8 +455,7 @@ class SemanticAnalyzer:
 
             if node.tag is Tag.SEMICOLON \
                     and siblings[0].tag \
-                    in [Tag.FOR, Tag.WHILE, Tag.UNTIL, Tag.IF]:
-                # self.vars_dict[self.current_scope] = {}
+                    in [Tag.FOR, Tag.WHILE, Tag.REPEAT, Tag.IF]:
                 self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
                 if not (node.tag is Tag.IF and
@@ -447,7 +472,6 @@ class SemanticAnalyzer:
                     self.assert_type_of_expression(abstract_expr_node)
 
             elif node.tag is Tag.ELSE:
-                # self.vars_dict[self.current_scope] = {}
                 self.else_flag = True
                 self.should_clear_vars_dict = True
                 if siblings[1].children[0].tag is NT.COMPLEX_OP_BODY:
@@ -457,6 +481,9 @@ class SemanticAnalyzer:
                         'message': 'multiple else blocks are not allowed'
                     }
 
+            elif node.tag is Tag.ID and self._is_func_call(node):
+                self.build_right_terminals_for_func_call(node)
+
             elif node.tag is NT.CALL_ARGS:
                 self.check_call_args_for_vars(node)
             elif node.tag in [NT.DEFINE_VAR,
@@ -465,6 +492,13 @@ class SemanticAnalyzer:
                               NT.DEFINE_INLINE_VAR]:
                 self.assert_type_of_expression(node)
 
+        if isinstance(node.tag, Tag):
+            self.code_generator.add_token(node,
+                                          siblings,
+                                          self.vars_dict,
+                                          self.current_scope,
+                                          self.right_terminals)
+
         if self.should_clear_vars_dict:
             self.vars_dict[self.current_scope] = {}
             self.current_scope -= 1
@@ -472,6 +506,12 @@ class SemanticAnalyzer:
                 self.current_scope += 1
                 self.else_flag = False
             self.should_clear_vars_dict = False
+
+    def build_right_terminals_for_func_call(self, func_id_node: Node):
+        self.right_terminals = []
+        self._visited_nodes[self._collect_right_terminals.__name__] = set()
+        self.dfs(func_id_node.parent.children[1].children[0],
+                 callback=self._collect_right_terminals)
 
     def check_call_args_for_vars(self, call_args_node: Node):
         if call_args_node.children:
@@ -530,7 +570,6 @@ class SemanticAnalyzer:
     def _assert_type_of_define_var(self, node: Node):
         left_var = node.children[1]
         self.assert_var_is_not_defined(left_var)
-        self.save_var(left_var, type=node.children[3].token.value)
 
         optional_define_var_assignment_node = node.children[4]
         self.right_terminals = []
@@ -538,6 +577,8 @@ class SemanticAnalyzer:
         self.dfs(optional_define_var_assignment_node,
                  callback=self._collect_right_terminals)
 
+        self.save_var(left_var, type=node.children[3].token.value,
+                      terminals=self.right_terminals)
         self.assert_expr_type(left_var)
 
     def _assert_type_of_inline_define_var(self, node: Node):
@@ -549,7 +590,6 @@ class SemanticAnalyzer:
             "node": left_var,
             "message": "iterator of for loop must be integer, char or boolean"
         }
-        self.save_var(left_var, node_type)
 
         define_var_assignment_node = node.children[4]
         self.right_terminals = []
@@ -557,6 +597,7 @@ class SemanticAnalyzer:
         self.dfs(define_var_assignment_node,
                  callback=self._collect_right_terminals)
 
+        self.save_var(left_var, node_type, terminals=self.right_terminals)
         self.assert_expr_type(left_var)
 
         abstract_expr_node = node.parent.children[3]
@@ -639,9 +680,10 @@ class SemanticAnalyzer:
         except ValueError:
             pass
 
-    def save_var(self, node, type):
+    def save_var(self, node, type, terminals):
         scoped_vars = self.vars_dict.get(self.current_scope, {})
-        scoped_vars[node.token.value] = {'type': VarType.from_str(type)}
+        scoped_vars[node.token.value] = {'type': VarType.from_str(type),
+                                         'expr': terminals}
         self.vars_dict[self.current_scope] = scoped_vars
 
     def get_var_type(self, node: Node) -> VarType:

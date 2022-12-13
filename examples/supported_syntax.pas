@@ -25,11 +25,11 @@ if (false) then
     print('false')
 else print('else');
 
-if (var3 = 'a') then
+if (var4 = 'a') then
 begin
     print('a');
 end
-else if (var3 = 'b') then
+else if (var4 = 'b') then
 begin
     print('b');
 end
@@ -52,7 +52,7 @@ repeat
 until true;
 
 var1 := abs(-1);
-var var_sqr: integer := sqr(+2);
+var var_sqr: real := sqr(2, 4);
 var var_sqrt: real := sqrt(4.0);
 var var_exp: real := exp(-2);
 

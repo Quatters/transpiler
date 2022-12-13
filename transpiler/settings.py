@@ -305,7 +305,7 @@ GRAMMAR_RULES = [
         (Special.LAMBDA,)
     }),
     GrammarRule(NT.CALL_ARGS_RIGHT, {
-        (Tag.COMMA, NT.ABSTRACT_EXPR),
+        (Tag.COMMA, NT.ABSTRACT_EXPR, NT.CALL_ARGS_RIGHT),
         (Special.LAMBDA,)
     }),
 
@@ -363,3 +363,20 @@ GRAMMAR_RULES = [
         (Tag.REPEAT, NT.BODY, Tag.UNTIL, NT.ABSTRACT_EXPR, Tag.SEMICOLON),
     })
 ]
+
+
+SHARP_TOKENS = {
+    "print": "Console.Write",
+    "println": "Console.WriteLine",
+    "read": "Console.Read",
+    "readln": "Console.ReadLine",
+    "sqrt": "Math.Sqrt",
+    "exp": "Math.Exp",
+    "sqr": "Math.Pow",
+    "abs": "Math.Abs",
+    "=": "==",
+    "<>": "!=",
+    "and": "&&",
+    "or": "||",
+    "not": "!"
+}
