@@ -2034,7 +2034,6 @@ class WorkingGrammarTestCase(TestCase):
         """)
 
         self.check_generator(
-            # noqa: E501
             """
             begin
                 var a: integer := 10;
@@ -2045,7 +2044,7 @@ class WorkingGrammarTestCase(TestCase):
 
                 var c: boolean := true;
                 var c1: boolean := (true and false) or
-                    (10 < 15) and ('lol' <> 'kek') or (a1 = b1);
+                    (1 < 5) and ('a' <> 'b') or (a1 = b1);
 
                 var d: char := 'd';
 
