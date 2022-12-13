@@ -8,7 +8,6 @@ const mirrorConfig = {
 function restoreData() {
     const sourcecode = window.localStorage.getItem('sourcecode') || '';
     const destcode = window.localStorage.getItem('destcode') || '';
-    const canDownload = window.localStorage.getItem('canDownload') || false;
     sourceCm.setValue(sourcecode);
     destCm.setValue(destcode);
     fileInput.value = '';
@@ -52,12 +51,10 @@ const destCm = CodeMirror.fromTextArea(
     }
 );
 
-const saveSourcecode = debounce(() => {
+sourceCm.on('change', debounce(() => {
     window.localStorage.setItem('sourcecode', sourceCm.getValue());
     statusLine.innerHTML = `Saved from ${new Date().toLocaleTimeString()}`;
-});
-
-sourceCm.on('change', saveSourcecode);
+}));
 
 buttonClear.addEventListener('click', function () {
     fileInput.value = '';
@@ -85,7 +82,7 @@ buttonTranspile.addEventListener('click', async function () {
     destCm.setValue(result);
 
     const canDownload = responseJson.success;
-    buttonDownload.toggleAttribute('disabled', !responseJson.success);
+    buttonDownload.toggleAttribute('disabled', !canDownload);
 
     window.localStorage.setItem('sourcecode', sourcecode);
     window.localStorage.setItem('destcode', result);
