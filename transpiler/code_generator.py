@@ -180,7 +180,7 @@ namespace Transpiler
                     + self.define_var_without_value(
                         var_type,
                         var_name
-                        )
+                    )
             else:
                 self.main_code += self.tabs + " " * 4 \
                     + self.define_var_with_value(
