@@ -246,11 +246,9 @@ class IntType(BaseType):
         ]
         super().check_node(node)
         assert cls.is_in_func or \
-            node.tag in acceptable \
-                and node.token.value != '/' \
-            or node.tag is Tag.ID \
-                and cls.is_var(node) \
-                and cls.is_type(node, [VarType.INTEGER]) \
+            node.tag in acceptable and node.token.value != '/' \
+            or node.tag is Tag.ID and cls.is_var(node) \
+            and cls.is_type(node, [VarType.INTEGER]) \
             or not cls.is_var(node), \
             cls.get_error_data(node, VarType.INTEGER)
 
@@ -270,10 +268,10 @@ class RealType(BaseType):
         assert cls.is_in_func or \
             node.tag in acceptable \
             or node.tag is Tag.ID \
-                and cls.is_var(node) \
-                and cls.is_type(node, [VarType.INTEGER, VarType.REAL]) \
+            and cls.is_var(node) \
+            and cls.is_type(node, [VarType.INTEGER, VarType.REAL]) \
             or node.tag is Tag.ID \
-                and not cls.is_var(node), \
+            and not cls.is_var(node), \
             cls.get_error_data(node, VarType.REAL)
 
 
@@ -393,7 +391,9 @@ class BooleanType(BaseType):
 
 
 class SemanticAnalyzer:
-    def __init__(self, tree: SyntaxTree, source_code: str, filepath: str | None = None):
+    def __init__(self, tree: SyntaxTree,
+                 source_code: str,
+                 filepath: str | None = None):
         self.tree = tree
         self.filepath = filepath
         self._visited_nodes = {}
@@ -453,7 +453,9 @@ class SemanticAnalyzer:
                 not self.__is_in_string_perform_assertions
         elif not self.__is_in_string_perform_assertions:
 
-            if node.tag is Tag.SEMICOLON and siblings[0].tag in [Tag.FOR, Tag.WHILE, Tag.REPEAT, Tag.IF]:
+            if node.tag is Tag.SEMICOLON \
+                    and siblings[0].tag \
+                    in [Tag.FOR, Tag.WHILE, Tag.REPEAT, Tag.IF]:
                 self.should_clear_vars_dict = True
             elif node.tag in [Tag.FOR, Tag.IF, Tag.REPEAT, Tag.WHILE]:
                 if not (node.tag is Tag.IF and
@@ -491,7 +493,11 @@ class SemanticAnalyzer:
                 self.assert_type_of_expression(node)
 
         if isinstance(node.tag, Tag):
-            self.code_generator.add_token(node, siblings, self.vars_dict, self.current_scope, self.right_terminals)
+            self.code_generator.add_token(node,
+                                          siblings,
+                                          self.vars_dict,
+                                          self.current_scope,
+                                          self.right_terminals)
 
         if self.should_clear_vars_dict:
             self.vars_dict[self.current_scope] = {}
@@ -504,7 +510,8 @@ class SemanticAnalyzer:
     def build_right_terminals_for_func_call(self, func_id_node: Node):
         self.right_terminals = []
         self._visited_nodes[self._collect_right_terminals.__name__] = set()
-        self.dfs(func_id_node.parent.children[1].children[0], callback=self._collect_right_terminals)
+        self.dfs(func_id_node.parent.children[1].children[0],
+                 callback=self._collect_right_terminals)
 
     def check_call_args_for_vars(self, call_args_node: Node):
         if call_args_node.children:
@@ -569,7 +576,8 @@ class SemanticAnalyzer:
         self.dfs(optional_define_var_assignment_node,
                  callback=self._collect_right_terminals)
 
-        self.save_var(left_var, type=node.children[3].token.value, terminals=self.right_terminals)
+        self.save_var(left_var, type=node.children[3].token.value,
+                      terminals=self.right_terminals)
         self.assert_expr_type(left_var)
 
     def _assert_type_of_inline_define_var(self, node: Node):

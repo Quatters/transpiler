@@ -66,7 +66,11 @@ namespace Transpiler
 }}
 """
 
-    def add_token(self, node: Node, siblings: list[Node], vars_dict, current_scope, right_terminals):
+    def add_token(self, node: Node,
+                  siblings: list[Node],
+                  vars_dict,
+                  current_scope,
+                  right_terminals):
         self.node = node
         self.siblings = siblings
         self.vars_dict = vars_dict
@@ -76,7 +80,8 @@ namespace Transpiler
         if node.tag is Tag.QUOTE:
             self.is_in_string = not self.is_in_string
 
-        if node.tag in [Tag.SEMICOLON, Tag.THEN, Tag.DO] and not self.is_in_string:
+        if node.tag in [Tag.SEMICOLON, Tag.THEN, Tag.DO]\
+                and not self.is_in_string:
             self.is_inside_command = False
             self.is_char_declaration = False
             if node.tag is Tag.SEMICOLON:
@@ -87,9 +92,10 @@ namespace Transpiler
                         self.main_code += ";\n"
             if node.tag is Tag.DO and self.is_inside_for_declaration:
                 self.is_inside_for_declaration = False
-                self.main_code += self.for_statement.format(self.for_parts["first"],
-                                                            self.for_parts["second"],
-                                                            self.for_parts["third"])
+                self.main_code += \
+                    self.for_statement.format(self.for_parts["first"],
+                                              self.for_parts["second"],
+                                              self.for_parts["third"])
 
         if node.tag is Tag.BEGIN and not self.is_in_string:
             self.is_global_vars = False
@@ -101,7 +107,8 @@ namespace Transpiler
         if node.tag is Tag.VAR and not self.is_in_string:
             if self.is_inside_for_declaration:
                 var_name = self.siblings[1].token.value
-                right_terminals = self.vars_dict[current_scope][var_name]['expr']
+                right_terminals = \
+                    self.vars_dict[current_scope][var_name]['expr']
             self.var_handling(right_terminals)
 
         if node.tag is Tag.IF and not self.is_in_string:
@@ -126,7 +133,9 @@ namespace Transpiler
         if node.tag is Tag.UNTIL and not self.is_in_string:
             self.until_handling()
 
-        if node.tag is Tag.ID and not self.is_in_string and not self.is_inside_command:
+        if node.tag is Tag.ID \
+                and not self.is_in_string \
+                and not self.is_inside_command:
             if self.is_func():
                 self.function_handling(right_terminals)
             else:
@@ -148,24 +157,33 @@ namespace Transpiler
             self.is_char_declaration = True
 
         if self.is_inside_for_declaration:
-            self.for_parts["first"] = self.define_var_with_value(var_type,
-                                                                 var_name,
-                                                                 right_terminals)
+            self.for_parts["first"] = \
+                self.define_var_with_value(var_type,
+                                           var_name,
+                                           right_terminals)
 
         elif self.is_global_vars:
             if len(var_expr) == 0:
-                self.global_vars += " " * 8 + "static " + self.define_var_without_value(var_type, var_name)
+                self.global_vars += " " * 8 + \
+                                    "static " + \
+                                    self.define_var_without_value(var_type,
+                                                                  var_name)
             else:
-                self.global_vars += " " * 8 + "static " + self.define_var_with_value(var_type,
-                                                                                     var_name,
-                                                                                     right_terminals)
+                self.global_vars += " " * 8 + \
+                                    "static " + \
+                                    self.define_var_with_value(var_type,
+                                                               var_name,
+                                                               right_terminals)
         else:
             if len(var_expr) == 0:
-                self.main_code += self.tabs + " " * 4 + self.define_var_without_value(var_type, var_name)
+                self.main_code += self.tabs + " " * 4 + \
+                                  self.define_var_without_value(var_type,
+                                                                var_name)
             else:
-                self.main_code += self.tabs + " " * 4 + self.define_var_with_value(var_type,
-                                                                                   var_name,
-                                                                                   right_terminals)
+                self.main_code += self.tabs + " " * 4 + \
+                                  self.define_var_with_value(var_type,
+                                                             var_name,
+                                                             right_terminals)
 
     def if_handling(self, right_terminals):
         self.is_inside_command = True
@@ -220,7 +238,8 @@ namespace Transpiler
     def function_handling(self, right_terminals):
         self.is_inside_command = True
         func_args = self.parse_expression(right_terminals)
-        func_name = SHARP_TOKENS.get(self.node.token.value, self.node.token.value)
+        func_name = SHARP_TOKENS.get(self.node.token.value,
+                                     self.node.token.value)
         self.main_code += self.tabs + 4 * ' ' + f'{func_name}{func_args}'
 
     def while_handling(self, right_terminals):
@@ -295,13 +314,17 @@ namespace Transpiler
             return value
 
     def get_string(self, node: Node) -> str:
-        string = self.source_code[node.token.pos:self.source_code.index("'", node.token.pos)]
+        pos = node.token.pos
+        string = self.source_code[pos:self.source_code.index("'",
+                                                             node.token.pos)]
         if self.is_char_declaration:
             return f"'{string}'"
         return f'"{string}"'
 
     def get_result(self):
-        return self.main_template.format(self.libs, self.global_vars, self.main_code)
+        return self.main_template.format(self.libs,
+                                         self.global_vars,
+                                         self.main_code)
 
     def get_libs(self):
         return self.libs

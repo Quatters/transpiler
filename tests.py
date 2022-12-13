@@ -679,13 +679,17 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
         sem_an = self.get_semantic_analyzer(tree, code)
-        code_result = sem_an.parse()
+        sem_an.parse()
 
         globals = sem_an.code_generator.get_global_vars()
         main = sem_an.code_generator.get_main_code()
 
-        self.assertEqual(globals.strip(), valid_globals.strip(), f'\n{globals} != {valid_globals}')
-        self.assertEqual(main.strip(), valid_main.strip(), f'\n{main} != {valid_main}')
+        self.assertEqual(globals.strip(),
+                         valid_globals.strip(),
+                         f'\n{globals} != {valid_globals}')
+        self.assertEqual(main.strip(),
+                         valid_main.strip(),
+                         f'\n{main} != {valid_main}')
 
     def test_expressions_syntax(self):
         code = """
@@ -1561,7 +1565,6 @@ class WorkingGrammarTestCase(TestCase):
             end.
         """)
 
-
     def test_until_loop_semantic(self):
         self.check_not_fails("""
             begin
@@ -2030,7 +2033,9 @@ class WorkingGrammarTestCase(TestCase):
         }
         """)
 
-        self.check_generator("""
+        self.check_generator(
+            # noqa: E501
+            """
             begin
                 var a: integer := 10;
                 var a1: integer := 10 + (15 * (100 - 5) - a + 19 * (10 + a));
@@ -2039,12 +2044,14 @@ class WorkingGrammarTestCase(TestCase):
                 var b1: real := 10.0 + b;
 
                 var c: boolean := true;
-                var c1: boolean := (true and false) or (10 < 15) and ('lol' <> 'kek') or (a1 = b1);
+                var c1: boolean := (true and false) or
+                    (10 < 15) and ('lol' <> 'kek') or (a1 = b1);
 
                 var d: char := 'd';
 
                 var e: string := 'string';
-                var e1: string := 'string' + 'false' + 'for if else while' + 'e+1' + e;
+                var e1: string := 'string' + 'false' +
+                    'for if else while' + 'e+1' + e;
 
                 sqrt('lol+', a + b, 10 < 15);
             end.
@@ -2144,7 +2151,7 @@ class WorkingGrammarTestCase(TestCase):
         {
             for (int i = 0; i <= 3; i++)
                 bool g = true;
-        } 
+        }
         """)
 
         self.check_generator("""
@@ -2160,7 +2167,7 @@ class WorkingGrammarTestCase(TestCase):
             {
                 bool g = true;
             }
-        } 
+        }
         """)
 
         self.check_generator("""
@@ -2184,7 +2191,7 @@ class WorkingGrammarTestCase(TestCase):
                     bool a = true && false;
                 }
             }
-        } 
+        }
         """)
 
         self.check_generator("""
@@ -2202,7 +2209,7 @@ class WorkingGrammarTestCase(TestCase):
                 for (int j = 15; j >= i; j--)
                     Math.Sqrt(j);
             }
-        } 
+        }
         """)
 
     def test_if_generator(self):
