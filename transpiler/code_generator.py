@@ -1,8 +1,9 @@
+from transpiler.base import TranspilerEnum
 from transpiler.tree import Node
 from transpiler.settings import Tag, NT, SHARP_TOKENS
 
 
-class SharpVarType:
+class SharpVarType(TranspilerEnum):
     INT = "int"
     DOUBLE = "double"
     CHAR = "char"
