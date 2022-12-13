@@ -371,6 +371,8 @@ GRAMMAR_RULES = [
 SHARP_TOKENS = {
     "print": "Console.Write",
     "println": "Console.WriteLine",
+    "write": "Console.Write",
+    "writeln": "Console.WriteLine",
     "read": "Console.Read",
     "readln": "Console.ReadLine",
     "sqrt": "Math.Sqrt",
