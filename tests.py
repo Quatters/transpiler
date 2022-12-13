@@ -636,6 +636,8 @@ class SyntaxAnalyzerTestCase(TestCase):
 
 
 class WorkingGrammarTestCase(TestCase):
+    maxDiff = None
+
     def get_lexer(self, code):
         lexer = Lexer(settings.Tag, settings.LEXER_RULES)
         lexer.buffer = code
@@ -645,8 +647,8 @@ class WorkingGrammarTestCase(TestCase):
         sa = SyntaxAnalyzer(settings.GRAMMAR_RULES)
         return sa
 
-    def get_semantic_analyzer(self, tree):
-        return SemanticAnalyzer(tree)
+    def get_semantic_analyzer(self, tree, source_code):
+        return SemanticAnalyzer(tree, source_code)
 
     def get_code_generator(self):
         raise NotImplementedError
@@ -655,9 +657,8 @@ class WorkingGrammarTestCase(TestCase):
         lexer = self.get_lexer(code)
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
-        sem_an = self.get_semantic_analyzer(tree)
-        tree = sem_an.parse()
-        self.assertTrue(tree.is_semantically_correct)
+        sem_an = self.get_semantic_analyzer(tree, code)
+        code = sem_an.parse()
         return sem_an
 
     def check_fails(self, code, err=SemanticError, msg=None):
@@ -665,7 +666,7 @@ class WorkingGrammarTestCase(TestCase):
         sa = self.get_syntax_analyzer()
         tree = sa.parse(lexer.tokens)
 
-        sem_an = self.get_semantic_analyzer(tree)
+        sem_an = self.get_semantic_analyzer(tree, code)
         with self.assertRaises(err) as error:
             sem_an.parse()
         if msg is not None:
@@ -673,11 +674,32 @@ class WorkingGrammarTestCase(TestCase):
 
         logger.info(f"Raised {error.exception}")
 
+    def check_generator(self, code, valid_globals, valid_main):
+        lexer = self.get_lexer(code)
+        sa = self.get_syntax_analyzer()
+        tree = sa.parse(lexer.tokens)
+        sem_an = self.get_semantic_analyzer(tree, code)
+        sem_an.parse()
+
+        globals = sem_an.code_generator.get_global_vars()
+        main = sem_an.code_generator.get_main_code()
+
+        self.assertEqual(globals.strip(),
+                         valid_globals.strip(),
+                         f'\n{globals} != {valid_globals}')
+        self.assertEqual(main.strip(),
+                         valid_main.strip(),
+                         f'\n{main} != {valid_main}')
+
     def test_expressions_syntax(self):
         code = """
             var a: integer := (1 * 2 - 4) * 5 / 7 - 8;
             begin
                 var b: boolean := not (1 > 2) and false;
+                somefunc(1, 2, 3, 4, 'fsdfsdf', somefunc('', 1 - 2),
+                    somefunc(somefunc()));
+                var c: integer := somefunc(1, 2, 3, 4,
+                    'fsdfsdf', somefunc('', 1 - 2), somefunc(somefunc()));
             end.
         """
         lexer = self.get_lexer(code)
@@ -1160,6 +1182,7 @@ class WorkingGrammarTestCase(TestCase):
     def test_call_functions(self):
         self.check_not_fails("""
             begin
+                var a1: integer := somefunc('some arg');
                 print('some text');
 
                 var a: real := 1 + sqrt(5);
@@ -1176,10 +1199,47 @@ class WorkingGrammarTestCase(TestCase):
                 var lol3: boolean := '__lol__' < 'kek';
                 var lol4: boolean := '' <> '' or '' >= '' or
                     '' <= '' or '' > '' or '' = '';
+
+                var lol5: integer := func1(1.1);
+                var lol6: integer := func1('');
+                var lol7: integer := func1(true);
+
+                var lol8: real := func1(True);
+                var lol9: real := func1('');
+
+                var lol10: boolean := func1(1);
+                var lol11: boolean := func1(1.1);
+                var lol12: boolean := func1('fds');
+
+                var lol13: char := func1(1);
+                var lol14: char := func1(1.1);
+                var lol15: char := func1(false);
+                var lol16: char := func1('fds');
+
+                var lol17: string := func1(1);
+                var lol18: string := func1(1.1);
+                var lol19: string := func1(false);
+                var lol20: string := func1('fds');
             end.
         """)
 
     def test_for_loop_semantic(self):
+        self.check_not_fails("""
+            begin
+                var a: integer := 10;
+                for var i: integer := 3 downto 1 do
+                    a := 1;
+            end.
+        """)
+
+        self.check_fails("""
+            begin
+                var a: integer := 10;
+                for var i: integer := 'str' downto 1 do
+                    a := 1;
+            end.
+        """)
+
         self.check_fails("""
             begin
                 for var a: boolean := 1 to 10 do
@@ -1958,3 +2018,413 @@ class WorkingGrammarTestCase(TestCase):
                     a *= 2;
             end.
         """, NotImplementedError)
+
+    def test_vars_generator(self):
+
+        self.check_generator("""
+            begin
+                var c: char := 'a';
+                c := 'c';
+            end.
+        """, "", """
+        {
+            char c = 'a';
+            c = 'c';
+        }
+        """)
+
+        self.check_generator(
+            """
+            begin
+                var a: integer := 10;
+                var a1: integer := 10 + (15 * (100 - 5) - a + 19 * (10 + a));
+
+                var b: real := 10.0;
+                var b1: real := 10.0 + b;
+
+                var c: boolean := true;
+                var c1: boolean := (true and false) or
+                    (1 < 5) and ('a' <> 'b') or (a1 = b1);
+
+                var d: char := 'd';
+
+                var e: string := 'string';
+                var e1: string := 'string' + 'false' +
+                    'for if else while' + 'e+1' + e;
+
+                sqrt('lol+', a + b, 10 < 15);
+            end.
+        """, "", """
+        {
+            int a = 10;
+            int a1 = 10 + (15 * (100 - 5) - a + 19 * (10 + a));
+            double b = 10.0;
+            double b1 = 10.0 + b;
+            bool c = true;
+            bool c1 = (true && false) || (1 < 5) && ("a" != "b") || (a1 == b1);
+            char d = 'd';
+            string e = "string";
+            string e1 = "string" + "false" + "for if else while" + "e+1" + e;
+            Math.Sqrt("lol+", a + b, 10 < 15);
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var a: string := 'lol' + 'kek';
+            end.
+        """, "",
+        """
+        {
+            string a = "lol" + "kek";
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var a: string := 'lol' + 'kek begin';
+                a := 'var print()';
+            end.
+        """, "", """
+        {
+            string a = "lol" + "kek begin";
+            a = "var print()";
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var a: integer := ((10 + 1) * 3) - 100;
+                var b: boolean := not (true);
+            end.
+        """, "", """
+        {
+            int a = ((10 + 1) * 3) - 100;
+            bool b = !(true);
+        }
+        """)
+
+    def test_while_generator(self):
+
+        self.check_generator("""
+            begin
+                while true do
+                    var a: integer := 10;
+
+                var b: integer := 10;
+            end.
+        """, "", """
+        {
+            while (true)
+                int a = 10;
+            int b = 10;
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                while true or false do
+                begin
+                    while false and true do
+                    begin
+                        print('pep8');
+                        println('while begin end');
+                    end;
+                    var a: integer := 10;
+                    read();
+                end;
+            end.
+        """, "", """
+        {
+            while (true || false)
+            {
+                while (false && true)
+                {
+                    Console.Write("pep8");
+                    Console.WriteLine("while begin end");
+                }
+                int a = 10;
+                Console.Read();
+            }
+        }
+        """)
+
+    def test_repeat_generator(self):
+
+        self.check_generator("""
+            begin
+                repeat
+                    var a: integer := 1;
+                until true;
+
+                var b: integer := 10;
+            end.
+        """, "", """
+        {
+            do {
+                int a = 1;
+            } while (true);
+            int b = 10;
+        }
+        """)
+
+    def test_for_loop_generator(self):
+        self.check_generator("""
+            begin
+                for var i: integer := 0 to 3 do
+                    var g: boolean := true;
+            end.
+        """, "", """
+        {
+            for (int i = 0; i <= 3; i++)
+                bool g = true;
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                for var i: integer := 0 to 3 do
+                begin
+                    var g: boolean := true;
+                end;
+            end.
+        """, "", """
+        {
+            for (int i = 0; i <= 3; i++)
+            {
+                bool g = true;
+            }
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                for var i: integer := 0 to 3 do
+                begin
+                    for var j: integer := i + 1 to 10 do
+                    begin
+                        print('to downto for i j');
+                        var a: boolean := TRUE and False;
+                    end;
+                end;
+            end.
+        """, "", """
+        {
+            for (int i = 0; i <= 3; i++)
+            {
+                for (int j = i + 1; j <= 10; j++)
+                {
+                    Console.Write("to downto for i j");
+                    bool a = true && false;
+                }
+            }
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                for var i: integer := 10 downto 3 do
+                begin
+                    for var j: integer := 15 downto i do
+                        sqrt(j);
+                end;
+            end.
+        """, "", """
+        {
+            for (int i = 10; i >= 3; i--)
+            {
+                for (int j = 15; j >= i; j--)
+                    Math.Sqrt(j);
+            }
+        }
+        """)
+
+    def test_if_generator(self):
+
+        self.check_generator("""
+        begin
+             if true then
+                 var j: integer := 10;
+
+             if true then
+                 var a: string := 'else'
+             else if false then
+                 var b: integer := 15
+             else
+                 var c: integer := 20;
+
+             var g3: integer;
+             var g4: integer := 100;
+             g4 := 110;
+
+             if true then
+                 var t1: integer := 10 + 5;
+        end.
+        """, "", """
+        {
+            if (true)
+                int j = 10;
+            if (true)
+                string a = "else";
+            else if (false)
+                int b = 15;
+            else
+                int c = 20;
+            int g3;
+            int g4 = 100;
+            g4 = 110;
+            if (true)
+                int t1 = 10 + 5;
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                if true then
+                    var j: integer := 10;
+
+                if true then
+                    var a: integer := 10
+                else if false then
+                    var b: integer := 15
+                else
+                    var c: integer := 20;
+
+                if true then
+                    var t1: integer := 10 + 5;
+            end.
+        """, "", """
+        {
+            if (true)
+                int j = 10;
+            if (true)
+                int a = 10;
+            else if (false)
+                int b = 15;
+            else
+                int c = 20;
+            if (true)
+                int t1 = 10 + 5;
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                if true then
+                begin
+                    for var i: integer := 1 to 10 do
+                    begin
+                        var a: integer := 10 + i;
+                    end;
+                end;
+            end.
+        """, "", """
+        {
+            if (true)
+            {
+                for (int i = 1; i <= 10; i++)
+                {
+                    int a = 10 + i;
+                }
+            }
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var asd : integer := 100;
+
+                if true then
+                    var e: integer := 30;
+
+                if true then
+                    var a: integer := 10
+                else
+                    var b: integer := 15;
+
+                if true then
+                begin
+                    var c: integer := 20;
+                end
+                else
+                    var d: integer := 25;
+            end.
+        """, "", """
+        {
+            int asd = 100;
+            if (true)
+                int e = 30;
+            if (true)
+                int a = 10;
+            else
+                int b = 15;
+            if (true)
+            {
+                int c = 20;
+            }
+            else
+                int d = 25;
+        }
+        """)
+
+    def test_call_functions_generator(self):
+
+        self.check_generator("""
+            begin
+                print('var e: integer := print()', '+-/    *');
+            end.
+        """, "", """
+        {
+            Console.Write("var e: integer := print()", "+-/    *");
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var b: boolean := 'var var var' <> 'var var';
+                sqrt('begin');
+            end.
+        """, "", """
+        {
+            bool b = "var var var" != "var var";
+            Math.Sqrt("begin");
+        }
+        """)
+
+        self.check_generator("""
+            begin
+                var a: integer;
+                print();
+            end.
+        """, "",
+        """
+        {
+            int a;
+            Console.Write();
+        }
+        """)
+
+    def test_global_vars_generator(self):
+
+        self.check_generator("""
+            var g1: boolean := true and false or TRUE;
+            var g2: real := 15.5 / 10.0;
+            begin
+                var a: integer := 10 + 12;
+                var b: integer := 5 * 9;
+                var c: boolean := a = b;
+                a := 15 + 30;
+                c := g1 and true;
+            end.
+        """, """
+        static bool g1 = true && false || true;
+        static double g2 = 15.5 / 10.0;
+        """, """
+        {
+            int a = 10 + 12;
+            int b = 5 * 9;
+            bool c = a == b;
+            a = 15 + 30;
+            c = g1 && true;
+        }
+        """)
