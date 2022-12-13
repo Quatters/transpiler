@@ -16,7 +16,6 @@ After that you can check [localhost:8000](http://localhost:8000).
 
 ## Known issues
 
-* Comments aren't supported.
 * Operational assignments are not supported.
 
 ```pascal
