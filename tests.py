@@ -95,8 +95,16 @@ class Tag(Terminal):
     PROCEDURE = 'PROCEDURE'
     FUNCTION = 'FUNCTION'
 
+    # comments
+    ONE_LINE_COMMENT = '__ONE_LINE_COMMENT__'
+    MULTI_LINE_COMMENT = '__MULTI_LINE_COMMENT__'
+
 
 LEXER_RULES = [
+    # comments
+    LexerRule(Tag.ONE_LINE_COMMENT, r'//.*\n'),
+    LexerRule(Tag.MULTI_LINE_COMMENT, r'\{[\d\D]*?\}'),
+
     # types
     LexerRule(Tag.T_INTEGER, r'\binteger\b'),
     LexerRule(Tag.T_REAL, r'\breal\b'),
@@ -208,6 +216,41 @@ class MathNonTerminal(NonTerminal):
 
 
 class LexerTestCase(TestCase):
+    def test_comments(self):
+        code = """
+            begin
+            // test
+            var1: real := 146.00;{
+            test
+            }
+            end.
+        """
+        lexer = Lexer(Tag, LEXER_RULES)
+        lexer.buffer = code
+        tokens = list(lexer.tokens)
+        self.assertEqual(tokens[0].tag, Tag.BEGIN)
+        self.assertEqual(tokens[1].tag, Tag.ID)
+        self.assertEqual(tokens[2].tag, Tag.COLON)
+        self.assertEqual(tokens[3].tag, Tag.T_REAL)
+        self.assertEqual(tokens[4].tag, Tag.ASSIGN)
+        self.assertEqual(tokens[5].tag, Tag.NUMBER_FLOAT)
+        self.assertEqual(tokens[6].tag, Tag.SEMICOLON)
+        self.assertEqual(tokens[7].tag, Tag.END)
+
+    def test_messed_comments(self):
+        code = """
+            begin
+            // test
+            var1: real := 146.00;{
+            test
+            end.
+        """
+        lexer = Lexer(Tag, LEXER_RULES)
+        lexer.buffer = code
+        with self.assertRaises(UnexpectedTokenError) as error:
+            list(lexer.tokens)
+        self.assertEqual(str(error.exception), r"{ at line 4")
+
     def test_invalid_token(self):
         code = """
             begi%n
