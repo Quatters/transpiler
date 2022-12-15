@@ -55,6 +55,28 @@ if true then
         print('str');
 ```
 
+* Boolean operands must wrap in brackets
+
+```pascal
+//ok
+var b: boolean := (10 < 15) and (5 > 0);
+
+//not supported
+var b: boolean := 10 < 15 and 5 > 0;
+```
+
+* Comparison of chars and strings are not valid in generated code
+```pascal
+//not valid in generated code
+var b: boolean := 'str1' = 'c';
+```
+
+* Comparison of strings and chars by `<`, `>`, `<=`, `>=` are not valid in generated code
+```pascal
+//not valid in generated code
+var b: boolean := 'str1' > 'str2';
+```
+
 ## Contribute
 
 Requirements: Python 3.10 or above.
