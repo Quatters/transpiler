@@ -55,7 +55,7 @@ if true then
         print('str');
 ```
 
-* Boolean operands must wrap in brackets
+* Boolean operands must be wrapped in brackets
 
 ```pascal
 //ok
@@ -67,8 +67,11 @@ var b: boolean := 10 < 15 and 5 > 0;
 
 * Comparison of chars and strings are not valid in generated code
 ```pascal
+var c: char := 'c';
+var s: string := 'str';
+
 //not valid in generated code
-var b: boolean := 'str1' = 'c';
+var b: boolean := s = c;
 ```
 
 * Comparison of strings and chars by `<`, `>`, `<=`, `>=` are not valid in generated code
