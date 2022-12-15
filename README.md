@@ -54,6 +54,46 @@ if true then
         print('str');
 ```
 
+* Boolean operands must be wrapped into brackets
+
+```pascal
+//ok
+var b: boolean := (10 < 15) and (5 > 0);
+
+//not supported
+var b: boolean := 10 < 15 and 5 > 0;
+```
+
+* Comparison of chars and strings are not valid in generated code
+```pascal
+var c: char := 'c';
+var s: string := 'str';
+
+//not valid in generated code
+var b: boolean := s = c;
+```
+
+* Comparison of strings and chars by `<`, `>`, `<=`, `>=` are not valid in generated code
+```pascal
+//not valid in generated code
+var b: boolean := 'str1' > 'str2';
+```
+
+* Number and type of arguments are not checked in function's call
+
+* Base functions are converted by map
+```
+//example
+write() -> Console.Write()
+read() -> Console.Read()
+```
+
+* Functions that are not contained in map converted with the same name
+```
+//example
+some_function() -> some_function()
+```
+
 ## Contribute
 
 Requirements: Python 3.10 or above.
@@ -86,13 +126,19 @@ e.g.
 python -m transpiler examples/supported_syntax.pas
 ```
 
-Run `web` module with
+To run `web` module, install web dependencies first:
+
+```bash
+pip install -r requirements-web.txt
+```
+
+Then run it with
 
 ```bash
 python -m web --dev
 ```
 
-where `--dev` sets uvicorn config suitable for development, e.g. use hot reload.
+where `--dev` sets uvicorn config suitable for development, e.g. it configures hot reload.
 
 Before submitting a pull request make sure that your code passes
 all tests and there are no `flake8` linter errors. Check it with
