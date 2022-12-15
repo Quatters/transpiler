@@ -55,7 +55,7 @@ if true then
         print('str');
 ```
 
-* Boolean operands must be wrapped in brackets
+* Boolean operands must be wrapped into brackets
 
 ```pascal
 //ok
