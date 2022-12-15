@@ -80,6 +80,21 @@ var b: boolean := s = c;
 var b: boolean := 'str1' > 'str2';
 ```
 
+* Number and type of arguments are not checked in function's call
+
+* Base functions are converted by map
+```
+//example
+write() -> Console.Write()
+read() -> Console.Read()
+```
+
+* Functions that are not contained in map converted with the same name
+```
+//example
+some_function() -> some_function()
+```
+
 ## Contribute
 
 Requirements: Python 3.10 or above.
