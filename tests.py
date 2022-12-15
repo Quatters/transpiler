@@ -95,13 +95,13 @@ class Tag(Terminal):
     PROCEDURE = 'PROCEDURE'
     FUNCTION = 'FUNCTION'
 
-    #comments
+    # comments
     ONE_LINE_COMMENT = '__ONE_LINE_COMMENT__'
     MULTI_LINE_COMMENT = '__MULTI_LINE_COMMENT__'
 
 
 LEXER_RULES = [
-    #comments
+    # comments
     LexerRule(Tag.ONE_LINE_COMMENT, r'//.*\n'),
     LexerRule(Tag.MULTI_LINE_COMMENT, r'\{[\d\D]*?\}'),
 
@@ -250,7 +250,6 @@ class LexerTestCase(TestCase):
         with self.assertRaises(UnexpectedTokenError) as error:
             list(lexer.tokens)
         self.assertEqual(str(error.exception), r"{ at line 4")
-
 
     def test_invalid_token(self):
         code = """
