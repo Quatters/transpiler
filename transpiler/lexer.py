@@ -51,7 +51,8 @@ class Lexer:
         self.buffer_length = len(self.buffer)
 
         while (token := self._parse_token()):
-            yield token
+            if '__' not in token.tag.value:
+                yield token
         yield Token(Special.LIMITER, Special.LIMITER.value, -1, -1)
 
         self.buffer = None
@@ -83,7 +84,7 @@ class Lexer:
             return token
 
         line = self._get_line()
-        msg = f"'{self.buffer[self.pos]}' at line {line}"
+        msg = f"{self.buffer[self.pos]} at line {line}"
         if self.filepath is not None:
             msg += f" ({self.filepath}:{line})"
         raise UnexpectedTokenError(msg)

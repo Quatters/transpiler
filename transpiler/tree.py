@@ -22,6 +22,7 @@ class Node:
 class SyntaxTree(ABC):
     def __init__(self, root):
         self.root = self.get_node(root)
+        self.vars_dict = {}
 
     @staticmethod
     def get_node(value: Node | Token | Symbol, parent: Node = None) -> Node:

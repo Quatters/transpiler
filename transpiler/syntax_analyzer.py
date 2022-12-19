@@ -177,7 +177,7 @@ class SyntaxAnalyzer:
                 expected_token = head.tag.value.replace('_', ' ')
                 line = current_token.line
                 msg = (
-                    f"'{current_token}' at line {line}. "
+                    f"{current_token} at line {line}. "
                     f"Expected '{expected_token}'"
                 )
                 if current_token.tag is Special.LIMITER:

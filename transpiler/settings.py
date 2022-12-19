@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+from pathlib import Path
 from transpiler.base import (
     Terminal,
     NonTerminal,
@@ -8,6 +9,8 @@ from transpiler.base import (
     GrammarRule,
     Special,
 )
+
+EXAMPLES_DIR = (Path(__file__).parent.parent / 'examples').resolve().absolute()
 
 
 logging.basicConfig(
@@ -60,10 +63,14 @@ class Tag(Terminal):
     PROCEDURE = 'procedure'
     FUNCTION = 'function'
 
+    ONE_LINE_COMMENT = '__ONE_LINE_COMMENT__'
+    MULTI_LINE_COMMENT = '__MULTI_LINE_COMMENT__'
+
 
 class NT(NonTerminal):
     VARS = 'VARS'
     DEFINE_VAR = 'DEFINE_VAR'
+    DEFINE_VAR_WITHOUT_SEMICOLON = 'DEFINE_VAR_WITHOUT_SEMICOLON'
     DEFINE_VARS_RECURSIVE = 'DEFINE_VARS_RECURSIVE'
     DEFINE_VAR_ASSIGNMENT = 'DEFINE_VAR_ASSIGNMENT'
     OPTIONAL_DEFINE_VAR_ASSIGNMENT = 'OPTIONAL_DEFINE_VAR_ASSIGNMENT'
@@ -76,15 +83,14 @@ class NT(NonTerminal):
     STRING_EXPR = 'STRING_EXPR'
     STRING_PART = 'STRING_PART'
 
-    ABSTRACT_COMPLEX_EXPR = 'ABSTRACT_COMPLEX_EXPR'
-    ABSTRACT_COMPLEX_EXPR_RIGHT = 'ABSTRACT_COMPLEX_EXPR_RIGHT'
-    ABSTRACT_COMPLEX_EXPR_VALUE = 'ABSTRACT_COMPLEX_EXPR_VALUE'
-    ABSTRACT_COMPLEX_EXPR_OP = 'ABSTRACT_COMPLEX_EXPR_OP'
-    ABSTRACT_COMPLEX_EXPR_WITH_NOT = 'ABSTRACT_COMPLEX_EXPR_WITH_NOT'
+    ABSTRACT_EXPR_RIGHT = 'ABSTRACT_EXPR_RIGHT'
+    ABSTRACT_EXPR_VALUE = 'ABSTRACT_EXPR_VALUE'
+    ABSTRACT_EXPR_OP = 'ABSTRACT_EXPR_OP'
+    ABSTRACT_EXPR_WITH_NOT = 'ABSTRACT_EXPR_WITH_NOT'
 
     NUMBER = 'NUMBER'
     BOOLEAN_OPTIONAL_NOT = 'BOOLEAN_OPTIONAL_NOT'
-    OPTIONAL_COMPARISON_OR_CALL = 'OPTIONAL_COMPARISON_OR_CALL'
+    OPTIONAL_CALL = 'OPTIONAL_CALL'
     COMPARABLE = 'COMPARABLE'
 
     PROG = 'PROG'
@@ -115,6 +121,8 @@ class NT(NonTerminal):
 
 
 LEXER_RULES = [
+    LexerRule(Tag.ONE_LINE_COMMENT, r'//.*\n'),
+    LexerRule(Tag.MULTI_LINE_COMMENT, r'\{[\d\D]*?\}'),
     LexerRule(Tag.TYPE_HINT, r'\binteger|real|boolean|char|string\b'),
     LexerRule(Tag.NUMBER_FLOAT, r'[\-\+]?\d+\.\d+'),
     LexerRule(Tag.NUMBER_INT, r'[\-\+]?\d+'),
@@ -154,9 +162,8 @@ LEXER_RULES = [
     LexerRule(Tag.COLON, r':'),
     LexerRule(Tag.COMMA, r','),
     LexerRule(Tag.DOT, r'\.'),
-    LexerRule(Tag.QUOTE, r"\'"),
+    LexerRule(Tag.QUOTE, r"\'")
 ]
-
 GRAMMAR_RULES = [
     GrammarRule(Special.START, {
         (NT.DEFINE_VARS_RECURSIVE, NT.PROG),
@@ -177,6 +184,15 @@ GRAMMAR_RULES = [
             Tag.SEMICOLON,
         ),
     }),
+    GrammarRule(NT.DEFINE_VAR_WITHOUT_SEMICOLON, {
+        (
+            Tag.VAR,
+            Tag.ID,
+            Tag.COLON,
+            Tag.TYPE_HINT,
+            NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT,
+        ),
+    }),
     GrammarRule(NT.OPTIONAL_DEFINE_VAR_ASSIGNMENT, {
         (Tag.ASSIGN, NT.ABSTRACT_EXPR),
         (Special.LAMBDA,)
@@ -194,10 +210,6 @@ GRAMMAR_RULES = [
         ),
     }),
 
-    GrammarRule(NT.ABSTRACT_EXPR, {
-        (NT.ABSTRACT_COMPLEX_EXPR,),
-    }),
-
     # strings
     GrammarRule(NT.STRING_EXPR, {
         (Tag.QUOTE, NT.STRING_PART, Tag.QUOTE),
@@ -209,41 +221,41 @@ GRAMMAR_RULES = [
     ),
 
     # boolean and math expressions
-    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR, {
-        (NT.ABSTRACT_COMPLEX_EXPR_VALUE, NT.ABSTRACT_COMPLEX_EXPR_RIGHT),
+    GrammarRule(NT.ABSTRACT_EXPR, {
+        (NT.ABSTRACT_EXPR_VALUE, NT.ABSTRACT_EXPR_RIGHT),
     }),
-    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_RIGHT, {
+    GrammarRule(NT.ABSTRACT_EXPR_RIGHT, {
         (
-            NT.ABSTRACT_COMPLEX_EXPR_OP,
-            NT.ABSTRACT_COMPLEX_EXPR_VALUE,
-            NT.ABSTRACT_COMPLEX_EXPR_RIGHT,
+            NT.ABSTRACT_EXPR_OP,
+            NT.ABSTRACT_EXPR_VALUE,
+            NT.ABSTRACT_EXPR_RIGHT,
         ),
         (Special.LAMBDA,)
     }),
-    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_VALUE, {
-        (NT.NUMBER, NT.OPTIONAL_COMPARISON_OR_CALL),
-        (Tag.ID, NT.OPTIONAL_COMPARISON_OR_CALL),
-        (Tag.BOOLEAN_VALUE, NT.OPTIONAL_COMPARISON_OR_CALL),
-        (NT.BOOLEAN_OPTIONAL_NOT, NT.ABSTRACT_COMPLEX_EXPR_WITH_NOT),
+    GrammarRule(NT.ABSTRACT_EXPR_VALUE, {
+        (NT.NUMBER,),
+        (Tag.ID, NT.OPTIONAL_CALL),
+        (Tag.BOOLEAN_VALUE,),
+        (NT.BOOLEAN_OPTIONAL_NOT, NT.ABSTRACT_EXPR_WITH_NOT),
         (NT.STRING_EXPR,),
     }),
-    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_OP, {
+    GrammarRule(NT.ABSTRACT_EXPR_OP, {
         (Tag.MATH_OPERATOR,),
         (Tag.BOOLEAN_OPERATOR,),
+        (Tag.COMPARE,),
     }),
     GrammarRule(NT.NUMBER, {
         (Tag.NUMBER_INT,),
         (Tag.NUMBER_FLOAT,),
     }),
-    GrammarRule(NT.ABSTRACT_COMPLEX_EXPR_WITH_NOT, {
-        (Tag.LBRACKET, NT.ABSTRACT_COMPLEX_EXPR, Tag.RBRACKET),
+    GrammarRule(NT.ABSTRACT_EXPR_WITH_NOT, {
+        (Tag.LBRACKET, NT.ABSTRACT_EXPR, Tag.RBRACKET),
     }),
     GrammarRule(NT.BOOLEAN_OPTIONAL_NOT, {
         (Tag.BOOLEAN_NOT,),
         (Special.LAMBDA,),
     }),
-    GrammarRule(NT.OPTIONAL_COMPARISON_OR_CALL, {
-        (Tag.COMPARE, NT.COMPARABLE),
+    GrammarRule(NT.OPTIONAL_CALL, {
         (NT.CALL,),
         (Special.LAMBDA,)
     }),
@@ -260,7 +272,8 @@ GRAMMAR_RULES = [
     }),
     GrammarRule(NT.COMPLEX_OP_BODY, {
         (Tag.BEGIN, NT.BODY, Tag.END),
-        (NT.ABSTRACT_STATEMENT,)
+        (NT.ABSTRACT_STATEMENT,),
+        (NT.DEFINE_VAR_WITHOUT_SEMICOLON,),
     }),
     GrammarRule(NT.BODY, {
         (NT.DEFINE_VAR, NT.BODY),
@@ -299,7 +312,7 @@ GRAMMAR_RULES = [
         (Special.LAMBDA,)
     }),
     GrammarRule(NT.CALL_ARGS_RIGHT, {
-        (Tag.COMMA, NT.ABSTRACT_EXPR),
+        (Tag.COMMA, NT.ABSTRACT_EXPR, NT.CALL_ARGS_RIGHT),
         (Special.LAMBDA,)
     }),
 
@@ -313,7 +326,7 @@ GRAMMAR_RULES = [
         ),
     }),
     GrammarRule(NT.IF_BLOCK_RIGHT, {
-        (NT.ABSTRACT_COMPLEX_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
+        (NT.ABSTRACT_EXPR, Tag.THEN, NT.COMPLEX_OP_BODY)
     }),
     GrammarRule(NT.ELSE_BLOCK, {
         (Tag.ELSE, NT.ELSE_BLOCK_RIGHT, NT.ELSE_BLOCK),
@@ -357,3 +370,22 @@ GRAMMAR_RULES = [
         (Tag.REPEAT, NT.BODY, Tag.UNTIL, NT.ABSTRACT_EXPR, Tag.SEMICOLON),
     })
 ]
+
+
+SHARP_TOKENS = {
+    "print": "Console.Write",
+    "println": "Console.WriteLine",
+    "write": "Console.Write",
+    "writeln": "Console.WriteLine",
+    "read": "Console.Read",
+    "readln": "Console.ReadLine",
+    "sqrt": "Math.Sqrt",
+    "exp": "Math.Exp",
+    "sqr": "Math.Pow",
+    "abs": "Math.Abs",
+    "=": "==",
+    "<>": "!=",
+    "and": "&&",
+    "or": "||",
+    "not": "!"
+}
