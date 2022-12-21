@@ -167,6 +167,7 @@ LEXER_RULES = [
 GRAMMAR_RULES = [
     GrammarRule(Special.START, {
         (NT.DEFINE_VARS_RECURSIVE, NT.PROG),
+        (Special.LAMBDA,),
     }),
 
     # vars
