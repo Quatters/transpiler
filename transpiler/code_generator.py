@@ -327,6 +327,8 @@ namespace Transpiler
         return f'"{string}"'
 
     def get_result(self):
+        if self.source_code == '':
+            return ''
         return self.main_template.format(self.libs,
                                          self.global_vars,
                                          self.main_code)
